@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotemin AI - Next Gen Meme Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-primary: #ff4500;
+            --brand-secondary: #ffb700;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #050505 100%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        .glass-panel {
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .main-gradient-text {
+            background: linear-gradient(to right, #fff 20%, #ff4500 50%, #fff 80%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infinite;
+        }
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+        .action-btn {
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .action-btn:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 20px 40px -10px rgba(255, 69, 0, 0.4);
+        }
+        .image-viewport {
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
+            transition: all 0.5s ease;
+        }
+        .loader-ring {
+            border-top-color: var(--brand-primary);
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .mode-selector {
+            background: rgba(255,255,255,0.03);
+            border-radius: 100px;
+            padding: 4px;
+        }
+        .mode-btn {
+            border-radius: 100px;
+            padding: 8px 24px;
+            font-size: 13px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+        .mode-btn.active {
+            background: white;
+            color: black;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center">
+
+    <div class="w-full max-w-7xl px-4 py-8 md:py-12 flex flex-col items-center">
+        <header class="text-center mb-12 space-y-2">
+            <h1 class="text-5xl md:text-7xl font-black main-gradient-text tracking-tighter">HOTEMIN PRO</h1>
+            <p class="text-zinc-500 font-bold tracking-[0.3em] text-[10px] uppercase">Neural Performance Bot v3.0</p>
+        </header>
+
+        <main class="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left Side: Main Viewport (7 cols) -->
+            <section class="lg:col-span-7 space-y-6">
+                <div id="image-container" class="image-viewport glass-panel rounded-[2.5rem] aspect-square lg:aspect-[4/5] w-full flex items-center justify-center relative overflow-hidden group">
+                    
+                    <!-- Idle State -->
+                    <div id="idle-view" class="text-center p-12 space-y-6">
+                        <div class="w-24 h-24 bg-zinc-900 rounded-full flex items-center justify-center mx-auto ring-8 ring-white/5">
+                            <svg class="w-10 h-10 text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        </div>
+                        <div class="space-y-2">
+                            <h3 class="text-xl font-bold text-zinc-400">Ready for Synthesis</h3>
+                            <p class="text-zinc-600 text-sm max-w-xs mx-auto">Input your prompt to generate high-fidelity Hotemin content</p>
+                        </div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="loading-view" class="hidden absolute inset-0 bg-black/90 backdrop-blur-3xl z-30 flex flex-col items-center justify-center">
+                        <div class="relative w-24 h-24 mb-6">
+                            <div class="absolute inset-0 border-4 border-white/5 rounded-full"></div>
+                            <div class="absolute inset-0 border-4 loader-ring rounded-full"></div>
+                        </div>
+                        <p class="text-white font-black tracking-widest text-lg animate-pulse">GENERATING HOTEMIN...</p>
+                        <p id="status-text" class="text-zinc-500 text-[10px] mt-2 uppercase font-bold">Injecting Neural Patterns</p>
+                    </div>
+
+                    <!-- Result View -->
+                    <img id="main-result" class="hidden w-full h-full object-cover" alt="Hotemin AI Result">
+
+                    <!-- Result Actions (Floating) -->
+                    <div id="result-actions" class="hidden absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/60 backdrop-blur-2xl p-4 rounded-3xl border border-white/10 opacity-0 group-hover:opacity-100 transition-all transform translate-y-10 group-hover:translate-y-0">
+                        <button onclick="downloadAsset()" class="p-4 bg-white/5 hover:bg-white/20 rounded-2xl transition-colors group/btn" title="Download High-Res">
+                            <svg class="w-6 h-6 text-white group-hover/btn:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        </button>
+                        <button onclick="postToX()" class="px-8 py-4 bg-white hover:bg-zinc-200 rounded-2xl text-black font-black flex items-center gap-3 transition-colors" title="Post to X">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
+                            SHARE ON X
+                        </button>
+                    </div>
+                </div>
+
+                <!-- X Integration Notice -->
+                <div id="share-tip" class="hidden glass-panel p-4 rounded-2xl flex gap-4 items-center">
+                    <div class="bg-blue-500/10 p-2 rounded-xl">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <p class="text-[11px] text-zinc-400"><b>Pro Tip:</b> X requires manual attachment. Download your Hotemin first, then click Share to post!</p>
+                </div>
+            </section>
+
+            <!-- Right Side: Controls (5 cols) -->
+            <section class="lg:col-span-5 space-y-6">
+                <div class="glass-panel rounded-[2rem] p-8 space-y-8">
+                    
+                    <!-- Mode Toggle -->
+                    <div class="space-y-3">
+                        <label class="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">Engine Mode</label>
+                        <div class="mode-selector flex">
+                            <button onclick="switchMode('gen')" id="mode-gen" class="mode-btn active flex-1">MEME GENERATOR</button>
+                            <button onclick="switchMode('swap')" id="mode-swap" class="mode-btn flex-1">FACE INJECTOR</button>
+                        </div>
+                    </div>
+
+                    <!-- Face Upload (Conditional) -->
+                    <div id="upload-zone" class="hidden space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                        <label class="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">Target Image</label>
+                        <div onclick="document.getElementById('file-input').click()" class="border-2 border-dashed border-white/5 rounded-3xl p-8 text-center hover:border-brand-primary/50 hover:bg-white/5 transition-all cursor-pointer group">
+                            <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFileSelect(this)">
+                            <div id="upload-placeholder" class="space-y-3">
+                                <svg class="w-10 h-10 text-zinc-700 mx-auto group-hover:text-brand-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4-4m4 4v12"></path></svg>
+                                <p class="text-xs text-zinc-500 font-bold">Tap to upload base photo</p>
+                            </div>
+                            <div id="upload-preview" class="hidden">
+                                <img id="preview-img" class="w-24 h-24 mx-auto object-cover rounded-2xl border-2 border-brand-primary/50">
+                                <p class="text-[10px] text-brand-primary font-bold mt-2 uppercase">Ready for Injection</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Prompt -->
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center px-2">
+                            <label class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Description</label>
+                            <span class="text-[9px] bg-white/5 text-zinc-500 px-2 py-0.5 rounded-full font-bold">AI ENHANCED</span>
+                        </div>
+                        <textarea id="prompt-input" 
+                                  class="w-full bg-zinc-950/50 border border-white/5 rounded-[1.5rem] p-5 text-sm text-white placeholder-zinc-700 focus:ring-2 focus:ring-brand-primary/50 focus:outline-none transition-all resize-none min-h-[120px]" 
+                                  placeholder="Describe the Hotemin scenario (e.g. Hotemin winning an Oscar and acting all cool about it)"></textarea>
+                    </div>
+
+                    <!-- Execute Button -->
+                    <button id="exec-btn" onclick="runSynthesis()" class="w-full py-6 rounded-[1.5rem] action-btn text-black font-black text-lg tracking-[0.15em] uppercase">
+                        INITIATE SYNTHESIS
+                    </button>
+                </div>
+
+                <!-- History Feed -->
+                <div class="glass-panel rounded-[2rem] p-6 space-y-4">
+                    <h4 class="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">Session History</h4>
+                    <div id="history-grid" class="grid grid-cols-4 gap-2 max-h-[120px] overflow-y-auto pr-2 custom-scroll">
+                        <!-- History items populate here -->
+                        <div class="col-span-4 py-8 text-center text-zinc-700 text-[10px] font-bold uppercase italic">Memory Empty</div>
+                    </div>
+                </div>
+
+                <!-- Footer/Credit -->
+                <footer class="text-center space-y-4 py-4">
+                    <a href="https://x.com/precidobos" target="_blank" class="inline-flex items-center gap-3 group">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-primary to-brand-secondary p-0.5">
+                            <div class="w-full h-full bg-black rounded-full flex items-center justify-center font-black text-[10px] text-white">PB</div>
+                        </div>
+                        <span class="text-zinc-500 text-[11px] font-bold group-hover:text-white transition-colors">Developed by @precidobos</span>
+                    </a>
+                </footer>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Core Config
+        const REFERENCE_URLS = [
+            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_1_2026-05-12_23-07-25.jpg',
+            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_2_2026-05-12_23-07-25.jpg',
+            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_3_2026-05-12_23-07-25.jpg',
+            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_4_2026-05-12_23-07-25.jpg',
+            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_5_2026-05-12_23-07-25.jpg',
+            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_6_2026-05-12_23-07-25.jpg',
+            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_7_2026-05-12_23-07-25.jpg',
+            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_8_2026-05-12_23-07-25.jpg'
+        ];
+
+        let mode = 'gen';
+        let referenceData = [];
+        let uploadBase64 = null;
+        let isWorking = false;
+
+        // Initialization
+        async function loadReferences() {
+            try {
+                const tasks = REFERENCE_URLS.map(async (url) => {
+                    const res = await fetch(url);
+                    const blob = await res.blob();
+                    return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                        reader.readAsDataURL(blob);
+                    });
+                });
+                referenceData = await Promise.all(tasks);
+                console.log("Hotemin Neural Buffer Initialized.");
+            } catch (err) {
+                console.error("Critical: Reference buffer failure", err);
+            }
+        }
+        window.onload = loadReferences;
+
+        function switchMode(m) {
+            mode = m;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`mode-${m}`).classList.add('active');
+            
+            const upload = document.getElementById('upload-zone');
+            const prompt = document.getElementById('prompt-input');
+            const btn = document.getElementById('exec-btn');
+
+            if (m === 'gen') {
+                upload.classList.add('hidden');
+                prompt.placeholder = "Describe the Hotemin scenario (e.g. Hotemin as a futuristic cyber-detective)";
+                btn.innerText = "INITIATE SYNTHESIS";
+            } else {
+                upload.classList.remove('hidden');
+                prompt.placeholder = "Optional style notes (e.g. make him look more mysterious)";
+                btn.innerText = "INJECT HOTEMIN FACE";
+            }
+        }
+
+        function handleFileSelect(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    uploadBase64 = e.target.result.split(',')[1];
+                    document.getElementById('upload-placeholder').classList.add('hidden');
+                    const preview = document.getElementById('upload-preview');
+                    preview.classList.remove('hidden');
+                    document.getElementById('preview-img').src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function runSynthesis() {
+            if (isWorking) return;
+            const promptText = document.getElementById('prompt-input').value.trim();
+
+            if (mode === 'gen' && !promptText) return alert("Please provide a description!");
+            if (mode === 'swap' && !uploadBase64) return alert("Please upload a target photo first!");
+
+            setLoading(true);
+
+            try {
+                const apiKey = ""; // Canvas will provide
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`;
+
+                let parts = [];
+                let systemInstruction = "";
+
+                if (mode === 'gen') {
+                    systemInstruction = "You are a professional character artist. Generate a high-quality, charismatic, and funny digital art piece featuring 'Hotemin'. Use the provided images of Hotemin as strict reference for facial features, style, and persona. The character should look alluring and cool. Return ONLY the image.";
+                    parts.push({ text: `Hotemin in this scenario: ${promptText}. Cinematic lighting, 4k, stylized meme aesthetic.` });
+                } else {
+                    systemInstruction = "You are a master of facial synthesis. Take the user's uploaded image and replace all faces with the face of 'Hotemin' from the provided reference images. Ensure perfect blending, lighting match, and maintaining the original expression's intensity. Use the text for stylistic guidance.";
+                    parts.push({ text: `Face swap with Hotemin. Style notes: ${promptText}` });
+                    parts.push({ inlineData: { mimeType: "image/jpeg", data: uploadBase64 } });
+                }
+
+                // Attach references
+                referenceData.slice(0, 5).forEach(data => { // Use top 5 for speed/reliability
+                    parts.push({ inlineData: { mimeType: "image/jpeg", data: data } });
+                });
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ role: "user", parts: parts }],
+                        generationConfig: {
+                            responseModalities: ['IMAGE'],
+                            imageConfig: { aspectRatio: "1:1" }
+                        }
+                    })
+                });
+
+                const result = await response.json();
+                const imagePart = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+
+                if (imagePart) {
+                    const dataUrl = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+                    renderResult(dataUrl);
+                } else {
+                    throw new Error("Neural output empty. Synthesis timeout.");
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert("Synthesis Glitch: " + err.message + ". Please try a simpler description.");
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function setLoading(busy) {
+            isWorking = busy;
+            const btn = document.getElementById('exec-btn');
+            const loader = document.getElementById('loading-view');
+            const actions = document.getElementById('result-actions');
+
+            btn.disabled = busy;
+            btn.style.opacity = busy ? "0.5" : "1";
+            
+            if (busy) {
+                loader.classList.remove('hidden');
+                actions.classList.add('hidden');
+            } else {
+                loader.classList.add('hidden');
+            }
+        }
+
+        function renderResult(url) {
+            document.getElementById('idle-view').classList.add('hidden');
+            const img = document.getElementById('main-result');
+            img.src = url;
+            img.classList.remove('hidden');
+            document.getElementById('result-actions').classList.remove('hidden');
+            document.getElementById('share-tip').classList.remove('hidden');
+            
+            // Add to history
+            const grid = document.getElementById('history-grid');
+            if (grid.innerText.includes("Memory Empty")) grid.innerHTML = "";
+            
+            const item = document.createElement('div');
+            item.className = "aspect-square rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform border border-white/10";
+            item.innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
+            item.onclick = () => {
+                img.src = url;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+            grid.prepend(item);
+        }
+
+        function downloadAsset() {
+            const url = document.getElementById('main-result').src;
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hotemin-pro-${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function postToX() {
+            const text = encodeURIComponent(`Hotemin just annihilated the timeline with this one. 🔥 Developed by @precidobos \n\n#HoteminAI #AIArt #MemeEngine`);
+            window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+        }
+    </script>
+</body>
+</html>
