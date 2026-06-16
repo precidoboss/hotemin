@@ -1,386 +1,614 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hotemin AI - Next Gen Meme Engine</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --brand-primary: #ff4500;
-            --brand-secondary: #ffb700;
-        }
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #050505 100%);
-            color: #ffffff;
-            min-height: 100vh;
-        }
-        .glass-panel {
-            background: rgba(20, 20, 20, 0.6);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-        .main-gradient-text {
-            background: linear-gradient(to right, #fff 20%, #ff4500 50%, #fff 80%);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: shine 4s linear infinite;
-        }
-        @keyframes shine {
-            to { background-position: 200% center; }
-        }
-        .action-btn {
-            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .action-btn:hover {
-            transform: translateY(-4px) scale(1.02);
-            box-shadow: 0 20px 40px -10px rgba(255, 69, 0, 0.4);
-        }
-        .image-viewport {
-            box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
-            transition: all 0.5s ease;
-        }
-        .loader-ring {
-            border-top-color: var(--brand-primary);
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .mode-selector {
-            background: rgba(255,255,255,0.03);
-            border-radius: 100px;
-            padding: 4px;
-        }
-        .mode-btn {
-            border-radius: 100px;
-            padding: 8px 24px;
-            font-size: 13px;
-            font-weight: 700;
-            transition: all 0.3s ease;
-        }
-        .mode-btn.active {
-            background: white;
-            color: black;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprite Sheet Studio — Character Turnaround</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0f;--surface:#12121a;--panel:#1a1a26;--border:#2a2a3e;
+  --accent:#7c5cbf;--accent2:#4fc3f7;--text:#e8e8f0;--muted:#6b6b85;
+  --green:#4ade80;--amber:#fbbf24;--red:#f87171;
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+h1,h2,h3{font-weight:600;letter-spacing:-0.02em}
+
+/* HEADER */
+.header{
+  display:flex;align-items:center;gap:16px;
+  padding:18px 28px;border-bottom:1px solid var(--border);
+  background:var(--surface);
+}
+.logo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.header h1{font-size:17px;color:var(--text)}
+.header p{font-size:12px;color:var(--muted);margin-top:2px}
+.badge{font-size:11px;padding:3px 8px;border-radius:4px;background:#1e1e30;border:1px solid var(--border);color:var(--accent2)}
+
+/* LAYOUT */
+.app{display:grid;grid-template-columns:280px 1fr;height:calc(100vh - 61px)}
+
+/* SIDEBAR */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:16px;overflow-y:auto}
+.section-label{font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+
+.url-input{width:100%;background:#0d0d18;border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;font-family:monospace}
+.url-input:focus{border-color:var(--accent)}
+
+.btn{
+  width:100%;padding:9px 14px;border-radius:6px;font-size:13px;font-weight:500;
+  cursor:pointer;border:none;transition:all .15s;
+}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#9070d4}
+.btn-primary:disabled{background:#333;color:var(--muted);cursor:not-allowed}
+.btn-secondary{background:#1e1e30;color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:#252538}
+.btn-export{background:linear-gradient(135deg,#1a472a,#166534);color:#4ade80;border:1px solid #166534}
+.btn-export:hover{background:linear-gradient(135deg,#166534,#15803d)}
+.btn-export:disabled{background:#1a1a2e;color:var(--muted);border-color:var(--border);cursor:not-allowed}
+
+.config-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.config-label{font-size:12px;color:var(--muted)}
+.config-val{font-size:12px;font-weight:600;color:var(--accent2)}
+input[type=range]{width:100%;accent-color:var(--accent);margin:4px 0 10px}
+
+.anim-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.anim-btn{padding:7px 6px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:#1a1a26;color:var(--muted);transition:all .15s;text-align:center}
+.anim-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot-ok{background:var(--green)}
+.dot-warn{background:var(--amber)}
+.dot-err{background:var(--red)}
+.dot-idle{background:var(--muted)}
+
+#statusMsg{font-size:12px;color:var(--muted);padding:8px 10px;background:#0d0d18;border-radius:6px;min-height:36px;display:flex;align-items:center}
+
+.preview-thumb{width:100%;border-radius:6px;border:1px solid var(--border);overflow:hidden;background:#0d0d18;display:flex;align-items:center;justify-content:center;min-height:80px}
+.preview-thumb img,#thumbImg{max-width:100%;max-height:100px;object-fit:contain;display:block}
+
+/* MAIN */
+.main{overflow:auto;padding:24px;display:flex;flex-direction:column;gap:24px}
+
+/* VIEWPORT */
+.viewport-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.viewport-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.viewport-header h2{font-size:14px;font-weight:600}
+.viewport-tabs{display:flex;gap:4px}
+.vtab{font-size:11px;padding:4px 10px;border-radius:4px;cursor:pointer;color:var(--muted);background:transparent;border:1px solid transparent}
+.vtab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.viewport-body{padding:20px;display:flex;align-items:center;justify-content:center;min-height:300px;background:#080810;position:relative}
+
+canvas{display:block;max-width:100%;image-rendering:pixelated}
+
+/* TURNAROUND GRID */
+.turnaround-grid{
+  display:grid;grid-template-columns:repeat(8,1fr);gap:8px;
+  padding:16px;background:#080810;
+}
+.angle-cell{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:#0d0d18;border-radius:6px;padding:8px 4px;border:1px solid var(--border);
+}
+.angle-cell canvas{width:80px;height:80px;border-radius:4px}
+.angle-cell span{font-size:9px;color:var(--muted);font-weight:500}
+
+/* SHEET PREVIEW */
+.sheet-scroll{overflow-x:auto;padding:16px;background:#080810}
+.sheet-scroll canvas{border:1px solid var(--border);border-radius:4px}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.stat-num{font-size:22px;font-weight:700;color:var(--accent2)}
+.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* PROGRESS */
+.progress-bar{height:3px;background:#1a1a26;border-radius:2px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .3s}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle}
+</style>
 </head>
-<body class="flex flex-col items-center">
+<body>
 
-    <div class="w-full max-w-7xl px-4 py-8 md:py-12 flex flex-col items-center">
-        <header class="text-center mb-12 space-y-2">
-            <h1 class="text-5xl md:text-7xl font-black main-gradient-text tracking-tighter">HOTEMIN PRO</h1>
-            <p class="text-zinc-500 font-bold tracking-[0.3em] text-[10px] uppercase">Neural Performance Bot v3.0</p>
-        </header>
+<div class="header">
+  <div class="logo">🎮</div>
+  <div>
+    <h1>Sprite Sheet Studio</h1>
+    <p>Professional character turnaround &amp; animation generator</p>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <span class="badge">1024×1024 cells</span>
+    <span class="badge">24-frame walk</span>
+    <span class="badge">12-frame idle</span>
+  </div>
+</div>
 
-        <main class="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            <!-- Left Side: Main Viewport (7 cols) -->
-            <section class="lg:col-span-7 space-y-6">
-                <div id="image-container" class="image-viewport glass-panel rounded-[2.5rem] aspect-square lg:aspect-[4/5] w-full flex items-center justify-center relative overflow-hidden group">
-                    
-                    <!-- Idle State -->
-                    <div id="idle-view" class="text-center p-12 space-y-6">
-                        <div class="w-24 h-24 bg-zinc-900 rounded-full flex items-center justify-center mx-auto ring-8 ring-white/5">
-                            <svg class="w-10 h-10 text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                        </div>
-                        <div class="space-y-2">
-                            <h3 class="text-xl font-bold text-zinc-400">Ready for Synthesis</h3>
-                            <p class="text-zinc-600 text-sm max-w-xs mx-auto">Input your prompt to generate high-fidelity Hotemin content</p>
-                        </div>
-                    </div>
+<div class="app">
 
-                    <!-- Loading State -->
-                    <div id="loading-view" class="hidden absolute inset-0 bg-black/90 backdrop-blur-3xl z-30 flex flex-col items-center justify-center">
-                        <div class="relative w-24 h-24 mb-6">
-                            <div class="absolute inset-0 border-4 border-white/5 rounded-full"></div>
-                            <div class="absolute inset-0 border-4 loader-ring rounded-full"></div>
-                        </div>
-                        <p class="text-white font-black tracking-widest text-lg animate-pulse">GENERATING HOTEMIN...</p>
-                        <p id="status-text" class="text-zinc-500 text-[10px] mt-2 uppercase font-bold">Injecting Neural Patterns</p>
-                    </div>
+<!-- SIDEBAR -->
+<div class="sidebar">
 
-                    <!-- Result View -->
-                    <img id="main-result" class="hidden w-full h-full object-cover" alt="Hotemin AI Result">
+  <div>
+    <div class="section-label">Source Image</div>
+    <input class="url-input" id="urlInput" type="text"
+      value="https://raw.githubusercontent.com/precidoboss/spaceship/main/IMG_7509.png"
+      placeholder="GitHub raw image URL…">
+    <div style="height:8px"></div>
+    <button class="btn btn-primary" id="loadBtn" onclick="loadCharacter()">Load Character</button>
+    <div style="height:8px"></div>
+    <div class="preview-thumb" id="thumbBox">
+      <span style="font-size:11px;color:var(--muted)">No image loaded</span>
+    </div>
+  </div>
 
-                    <!-- Result Actions (Floating) -->
-                    <div id="result-actions" class="hidden absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/60 backdrop-blur-2xl p-4 rounded-3xl border border-white/10 opacity-0 group-hover:opacity-100 transition-all transform translate-y-10 group-hover:translate-y-0">
-                        <button onclick="downloadAsset()" class="p-4 bg-white/5 hover:bg-white/20 rounded-2xl transition-colors group/btn" title="Download High-Res">
-                            <svg class="w-6 h-6 text-white group-hover/btn:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        </button>
-                        <button onclick="postToX()" class="px-8 py-4 bg-white hover:bg-zinc-200 rounded-2xl text-black font-black flex items-center gap-3 transition-colors" title="Post to X">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
-                            SHARE ON X
-                        </button>
-                    </div>
-                </div>
+  <div>
+    <div class="section-label">Animation</div>
+    <div class="anim-btns">
+      <div class="anim-btn active" id="btnWalk" onclick="setAnim('walk')">🚶 Walk<br><small>24 frames</small></div>
+      <div class="anim-btn" id="btnIdle" onclick="setAnim('idle')">🧍 Idle<br><small>12 frames</small></div>
+    </div>
+    <div class="config-row">
+      <span class="config-label">Speed (FPS)</span>
+      <span class="config-val" id="fpsVal">12</span>
+    </div>
+    <input type="range" min="4" max="30" value="12" id="fpsSlider" oninput="updateFPS(this.value)">
+    <div class="config-row">
+      <span class="config-label">Scale</span>
+      <span class="config-val" id="scaleVal">70%</span>
+    </div>
+    <input type="range" min="40" max="90" value="70" id="scaleSlider" oninput="updateScale(this.value)">
+    <div class="config-row">
+      <span class="config-label">View Angle</span>
+      <span class="config-val" id="angleVal">Front</span>
+    </div>
+    <input type="range" min="0" max="7" value="0" id="angleSlider" oninput="updateAngle(this.value)">
+  </div>
 
-                <!-- X Integration Notice -->
-                <div id="share-tip" class="hidden glass-panel p-4 rounded-2xl flex gap-4 items-center">
-                    <div class="bg-blue-500/10 p-2 rounded-xl">
-                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    </div>
-                    <p class="text-[11px] text-zinc-400"><b>Pro Tip:</b> X requires manual attachment. Download your Hotemin first, then click Share to post!</p>
-                </div>
-            </section>
+  <div>
+    <div class="section-label">Export</div>
+    <button class="btn btn-export" id="exportSheetBtn" onclick="exportSpriteSheet()" disabled>
+      ⬇ Export Sprite Sheet PNG
+    </button>
+    <div style="height:6px"></div>
+    <button class="btn btn-secondary" id="exportTurnaround" onclick="exportTurnaround()" disabled>
+      ⬇ Export Turnaround PNG
+    </button>
+  </div>
 
-            <!-- Right Side: Controls (5 cols) -->
-            <section class="lg:col-span-5 space-y-6">
-                <div class="glass-panel rounded-[2rem] p-8 space-y-8">
-                    
-                    <!-- Mode Toggle -->
-                    <div class="space-y-3">
-                        <label class="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">Engine Mode</label>
-                        <div class="mode-selector flex">
-                            <button onclick="switchMode('gen')" id="mode-gen" class="mode-btn active flex-1">MEME GENERATOR</button>
-                            <button onclick="switchMode('swap')" id="mode-swap" class="mode-btn flex-1">FACE INJECTOR</button>
-                        </div>
-                    </div>
+  <div>
+    <div class="section-label">Status</div>
+    <div id="statusMsg"><span class="status-dot dot-idle"></span>Ready to load</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
 
-                    <!-- Face Upload (Conditional) -->
-                    <div id="upload-zone" class="hidden space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                        <label class="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">Target Image</label>
-                        <div onclick="document.getElementById('file-input').click()" class="border-2 border-dashed border-white/5 rounded-3xl p-8 text-center hover:border-brand-primary/50 hover:bg-white/5 transition-all cursor-pointer group">
-                            <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFileSelect(this)">
-                            <div id="upload-placeholder" class="space-y-3">
-                                <svg class="w-10 h-10 text-zinc-700 mx-auto group-hover:text-brand-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4-4m4 4v12"></path></svg>
-                                <p class="text-xs text-zinc-500 font-bold">Tap to upload base photo</p>
-                            </div>
-                            <div id="upload-preview" class="hidden">
-                                <img id="preview-img" class="w-24 h-24 mx-auto object-cover rounded-2xl border-2 border-brand-primary/50">
-                                <p class="text-[10px] text-brand-primary font-bold mt-2 uppercase">Ready for Injection</p>
-                            </div>
-                        </div>
-                    </div>
+</div>
 
-                    <!-- User Prompt -->
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center px-2">
-                            <label class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Description</label>
-                            <span class="text-[9px] bg-white/5 text-zinc-500 px-2 py-0.5 rounded-full font-bold">AI ENHANCED</span>
-                        </div>
-                        <textarea id="prompt-input" 
-                                  class="w-full bg-zinc-950/50 border border-white/5 rounded-[1.5rem] p-5 text-sm text-white placeholder-zinc-700 focus:ring-2 focus:ring-brand-primary/50 focus:outline-none transition-all resize-none min-h-[120px]" 
-                                  placeholder="Describe the Hotemin scenario (e.g. Hotemin winning an Oscar and acting all cool about it)"></textarea>
-                    </div>
+<!-- MAIN PANEL -->
+<div class="main">
 
-                    <!-- Execute Button -->
-                    <button id="exec-btn" onclick="runSynthesis()" class="w-full py-6 rounded-[1.5rem] action-btn text-black font-black text-lg tracking-[0.15em] uppercase">
-                        INITIATE SYNTHESIS
-                    </button>
-                </div>
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-num" id="statAngles">0</div><div class="stat-label">Angles</div></div>
+    <div class="stat-card"><div class="stat-num" id="statFrames">0</div><div class="stat-label">Total Frames</div></div>
+    <div class="stat-card"><div class="stat-num" id="statSize">—</div><div class="stat-label">Cell Size</div></div>
+    <div class="stat-card"><div class="stat-num" id="statSheet">—</div><div class="stat-label">Sheet Size</div></div>
+  </div>
 
-                <!-- History Feed -->
-                <div class="glass-panel rounded-[2rem] p-6 space-y-4">
-                    <h4 class="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">Session History</h4>
-                    <div id="history-grid" class="grid grid-cols-4 gap-2 max-h-[120px] overflow-y-auto pr-2 custom-scroll">
-                        <!-- History items populate here -->
-                        <div class="col-span-4 py-8 text-center text-zinc-700 text-[10px] font-bold uppercase italic">Memory Empty</div>
-                    </div>
-                </div>
-
-                <!-- Footer/Credit -->
-                <footer class="text-center space-y-4 py-4">
-                    <a href="https://x.com/precidobos" target="_blank" class="inline-flex items-center gap-3 group">
-                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-primary to-brand-secondary p-0.5">
-                            <div class="w-full h-full bg-black rounded-full flex items-center justify-center font-black text-[10px] text-white">PB</div>
-                        </div>
-                        <span class="text-zinc-500 text-[11px] font-bold group-hover:text-white transition-colors">Developed by @precidobos</span>
-                    </a>
-                </footer>
-            </section>
-        </main>
+  <!-- LIVE PREVIEW -->
+  <div class="viewport-card">
+    <div class="viewport-header">
+      <h2>Live Preview</h2>
+      <div class="viewport-tabs">
+        <div class="vtab active" onclick="switchView('preview',this)">Animation</div>
+        <div class="vtab" onclick="switchView('turnaround',this)">Turnaround</div>
+        <div class="vtab" onclick="switchView('sheet',this)">Sprite Sheet</div>
+      </div>
     </div>
 
-    <script>
-        // Core Config
-        const REFERENCE_URLS = [
-            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_1_2026-05-12_23-07-25.jpg',
-            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_2_2026-05-12_23-07-25.jpg',
-            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_3_2026-05-12_23-07-25.jpg',
-            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_4_2026-05-12_23-07-25.jpg',
-            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_5_2026-05-12_23-07-25.jpg',
-            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_6_2026-05-12_23-07-25.jpg',
-            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_7_2026-05-12_23-07-25.jpg',
-            'https://raw.githubusercontent.com/precidoboss/hotemin/main/photo_8_2026-05-12_23-07-25.jpg'
-        ];
+    <!-- ANIMATION VIEW -->
+    <div id="viewPreview" class="viewport-body">
+      <canvas id="previewCanvas" width="256" height="256"></canvas>
+      <div style="position:absolute;bottom:12px;right:12px;font-size:11px;color:var(--muted)" id="frameCounter">Frame 0/0</div>
+    </div>
 
-        let mode = 'gen';
-        let referenceData = [];
-        let uploadBase64 = null;
-        let isWorking = false;
+    <!-- TURNAROUND VIEW -->
+    <div id="viewTurnaround" style="display:none">
+      <div class="turnaround-grid" id="turnaroundGrid"></div>
+    </div>
 
-        // Initialization
-        async function loadReferences() {
-            try {
-                const tasks = REFERENCE_URLS.map(async (url) => {
-                    const res = await fetch(url);
-                    const blob = await res.blob();
-                    return new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                        reader.readAsDataURL(blob);
-                    });
-                });
-                referenceData = await Promise.all(tasks);
-                console.log("Hotemin Neural Buffer Initialized.");
-            } catch (err) {
-                console.error("Critical: Reference buffer failure", err);
-            }
-        }
-        window.onload = loadReferences;
+    <!-- SHEET VIEW -->
+    <div id="viewSheet" style="display:none">
+      <div class="sheet-scroll">
+        <canvas id="sheetCanvas"></canvas>
+      </div>
+    </div>
+  </div>
 
-        function switchMode(m) {
-            mode = m;
-            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`mode-${m}`).classList.add('active');
-            
-            const upload = document.getElementById('upload-zone');
-            const prompt = document.getElementById('prompt-input');
-            const btn = document.getElementById('exec-btn');
+</div>
+</div>
 
-            if (m === 'gen') {
-                upload.classList.add('hidden');
-                prompt.placeholder = "Describe the Hotemin scenario (e.g. Hotemin as a futuristic cyber-detective)";
-                btn.innerText = "INITIATE SYNTHESIS";
-            } else {
-                upload.classList.remove('hidden');
-                prompt.placeholder = "Optional style notes (e.g. make him look more mysterious)";
-                btn.innerText = "INJECT HOTEMIN FACE";
-            }
-        }
+<script>
+const CELL = 256;
+const ANGLES = 8;
+const ANGLE_NAMES = ['Front','¾ Front R','Side R','¾ Back R','Back','¾ Back L','Side L','¾ Front L'];
+const SRC_ROWS = 2, SRC_COLS = 3;
 
-        function handleFileSelect(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    uploadBase64 = e.target.result.split(',')[1];
-                    document.getElementById('upload-placeholder').classList.add('hidden');
-                    const preview = document.getElementById('upload-preview');
-                    preview.classList.remove('hidden');
-                    document.getElementById('preview-img').src = e.target.result;
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
+let srcImg = null;
+let currentAnim = 'walk';
+let fps = 12, charScale = 0.70, currentAngle = 0;
+let frameIndex = 0, animTimer = null;
+let walkFrames = [], idleFrames = [];
+let isReady = false;
 
-        async function runSynthesis() {
-            if (isWorking) return;
-            const promptText = document.getElementById('prompt-input').value.trim();
+// Source grid layout: top row = front, 3/4R, sideR; bottom = back, 3/4backL, 3/4frontL
+// We'll map them to 8 angles by mirroring
+const SRC_MAP = [
+  {r:0,c:0,flip:false},  // 0 Front
+  {r:0,c:1,flip:false},  // 1 ¾Front R
+  {r:0,c:2,flip:false},  // 2 Side R
+  {r:1,c:2,flip:false},  // 3 ¾Back R (bottom right)
+  {r:1,c:0,flip:false},  // 4 Back (bottom left)
+  {r:1,c:2,flip:true},   // 5 ¾Back L (mirror of ¾Back R)
+  {r:0,c:2,flip:true},   // 6 Side L (mirror of Side R)
+  {r:0,c:1,flip:true},   // 7 ¾Front L (mirror of ¾Front R)
+];
 
-            if (mode === 'gen' && !promptText) return alert("Please provide a description!");
-            if (mode === 'swap' && !uploadBase64) return alert("Please upload a target photo first!");
+function setStatus(msg, type='idle'){
+  const colors={'idle':'var(--muted)','ok':'var(--green)','warn':'var(--amber)','err':'var(--red)','load':'var(--accent2)'};
+  const icons={'idle':'⬤','ok':'✓','warn':'⚠','err':'✕','load':'◌'};
+  document.getElementById('statusMsg').innerHTML =
+    `<span style="color:${colors[type]};margin-right:6px">${icons[type]}</span>${msg}`;
+}
 
-            setLoading(true);
+function setProgress(p){
+  document.getElementById('progressFill').style.width = p+'%';
+}
 
-            try {
-                const apiKey = ""; // Canvas will provide
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`;
+function updateFPS(v){ fps=+v; document.getElementById('fpsVal').textContent=v; restartAnim(); }
+function updateScale(v){ charScale=v/100; document.getElementById('scaleVal').textContent=v+'%'; if(isReady)buildAllFrames(); }
+function updateAngle(v){ currentAngle=+v; document.getElementById('angleVal').textContent=ANGLE_NAMES[v]; }
+function setAnim(a){
+  currentAnim=a;
+  document.getElementById('btnWalk').classList.toggle('active',a==='walk');
+  document.getElementById('btnIdle').classList.toggle('active',a==='idle');
+  frameIndex=0; restartAnim();
+}
 
-                let parts = [];
-                let systemInstruction = "";
+function switchView(v,tab){
+  ['preview','turnaround','sheet'].forEach(id=>{
+    document.getElementById('view'+id.charAt(0).toUpperCase()+id.slice(1)).style.display='none';
+  });
+  document.getElementById('view'+v.charAt(0).toUpperCase()+v.slice(1)).style.display='';
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+}
 
-                if (mode === 'gen') {
-                    systemInstruction = "You are a professional character artist. Generate a high-quality, charismatic, and funny digital art piece featuring 'Hotemin'. Use the provided images of Hotemin as strict reference for facial features, style, and persona. The character should look alluring and cool. Return ONLY the image.";
-                    parts.push({ text: `Hotemin in this scenario: ${promptText}. Cinematic lighting, 4k, stylized meme aesthetic.` });
-                } else {
-                    systemInstruction = "You are a master of facial synthesis. Take the user's uploaded image and replace all faces with the face of 'Hotemin' from the provided reference images. Ensure perfect blending, lighting match, and maintaining the original expression's intensity. Use the text for stylistic guidance.";
-                    parts.push({ text: `Face swap with Hotemin. Style notes: ${promptText}` });
-                    parts.push({ inlineData: { mimeType: "image/jpeg", data: uploadBase64 } });
-                }
+async function loadCharacter(){
+  const url = document.getElementById('urlInput').value.trim();
+  if(!url){setStatus('Please enter a URL','err');return;}
 
-                // Attach references
-                referenceData.slice(0, 5).forEach(data => { // Use top 5 for speed/reliability
-                    parts.push({ inlineData: { mimeType: "image/jpeg", data: data } });
-                });
+  setStatus('Loading image…','load');
+  setProgress(10);
+  document.getElementById('loadBtn').disabled=true;
 
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ role: "user", parts: parts }],
-                        generationConfig: {
-                            responseModalities: ['IMAGE'],
-                            imageConfig: { aspectRatio: "1:1" }
-                        }
-                    })
-                });
+  const img = new Image();
+  img.crossOrigin='anonymous';
 
-                const result = await response.json();
-                const imagePart = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+  img.onload = async ()=>{
+    srcImg=img;
+    setProgress(30);
+    setStatus('Image loaded — extracting angles…','load');
 
-                if (imagePart) {
-                    const dataUrl = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
-                    renderResult(dataUrl);
-                } else {
-                    throw new Error("Neural output empty. Synthesis timeout.");
-                }
+    // Show thumb
+    const tb=document.getElementById('thumbBox');
+    tb.innerHTML='';
+    const ti=document.createElement('img');
+    ti.src=url; ti.style.maxWidth='100%'; ti.style.maxHeight='100px'; ti.style.objectFit='contain';
+    ti.crossOrigin='anonymous';
+    tb.appendChild(ti);
 
-            } catch (err) {
-                console.error(err);
-                alert("Synthesis Glitch: " + err.message + ". Please try a simpler description.");
-            } finally {
-                setLoading(false);
-            }
-        }
+    await buildAllFrames();
+    buildTurnaroundGrid();
+    buildSpriteSheet();
+    renderSheet();
+    updateStats();
 
-        function setLoading(busy) {
-            isWorking = busy;
-            const btn = document.getElementById('exec-btn');
-            const loader = document.getElementById('loading-view');
-            const actions = document.getElementById('result-actions');
+    isReady=true;
+    document.getElementById('exportSheetBtn').disabled=false;
+    document.getElementById('exportTurnaround').disabled=false;
+    document.getElementById('loadBtn').disabled=false;
+    restartAnim();
+    setStatus('Ready — '+ANGLES+' angles, 36 total frames','ok');
+    setProgress(100);
+  };
 
-            btn.disabled = busy;
-            btn.style.opacity = busy ? "0.5" : "1";
-            
-            if (busy) {
-                loader.classList.remove('hidden');
-                actions.classList.add('hidden');
-            } else {
-                loader.classList.add('hidden');
-            }
-        }
+  img.onerror=()=>{
+    setStatus('Failed to load image — check URL/CORS','err');
+    document.getElementById('loadBtn').disabled=false;
+    setProgress(0);
+  };
 
-        function renderResult(url) {
-            document.getElementById('idle-view').classList.add('hidden');
-            const img = document.getElementById('main-result');
-            img.src = url;
-            img.classList.remove('hidden');
-            document.getElementById('result-actions').classList.remove('hidden');
-            document.getElementById('share-tip').classList.remove('hidden');
-            
-            // Add to history
-            const grid = document.getElementById('history-grid');
-            if (grid.innerText.includes("Memory Empty")) grid.innerHTML = "";
-            
-            const item = document.createElement('div');
-            item.className = "aspect-square rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition-transform border border-white/10";
-            item.innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
-            item.onclick = () => {
-                img.src = url;
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            };
-            grid.prepend(item);
-        }
+  img.src=url+'?t='+Date.now();
+}
 
-        function downloadAsset() {
-            const url = document.getElementById('main-result').src;
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `hotemin-pro-${Date.now()}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
+function extractAngle(angleIdx){
+  const c=document.createElement('canvas'); c.width=CELL; c.height=CELL;
+  const ctx=c.getContext('2d');
+  const m=SRC_MAP[angleIdx];
 
-        function postToX() {
-            const text = encodeURIComponent(`Hotemin just annihilated the timeline with this one. 🔥 Developed by @precidobos \n\n#HoteminAI #AIArt #MemeEngine`);
-            window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
-        }
-    </script>
+  if(!srcImg){return c;}
+
+  const sw=srcImg.naturalWidth/SRC_COLS;
+  const sh=srcImg.naturalHeight/SRC_ROWS;
+  const sx=m.c*sw, sy=m.r*sh;
+
+  const scale=charScale;
+  const dw=CELL*scale, dh=CELL*scale;
+  const dx=(CELL-dw)/2, dy=(CELL-dh)/2;
+
+  ctx.save();
+  if(m.flip){
+    ctx.translate(CELL,0); ctx.scale(-1,1);
+    ctx.drawImage(srcImg,sx,sy,sw,sh, CELL-dx-dw, dy, dw, dh);
+  } else {
+    ctx.drawImage(srcImg,sx,sy,sw,sh, dx, dy, dw, dh);
+  }
+  ctx.restore();
+  return c;
+}
+
+function buildWalkFrame(angleIdx, frameNum, totalFrames){
+  const c=document.createElement('canvas'); c.width=CELL; c.height=CELL;
+  const ctx=c.getContext('2d');
+
+  const t=frameNum/totalFrames;
+  const cycle=Math.PI*2*t;
+
+  // Base character
+  const base=extractAngle(angleIdx);
+
+  // Walk offset: body bob + leg swing
+  const bobY=Math.abs(Math.sin(cycle))*6;
+  const swayX=Math.sin(cycle)*3;
+  const tiltAngle=Math.sin(cycle)*0.025;
+
+  ctx.save();
+  ctx.translate(CELL/2+swayX, CELL/2+bobY);
+  ctx.rotate(tiltAngle);
+  ctx.translate(-CELL/2,-CELL/2);
+  ctx.drawImage(base,0,0);
+  ctx.restore();
+
+  // Arm swing overlays (drawn as bezier arcs to simulate arm motion)
+  drawArmSwing(ctx, angleIdx, t);
+  drawLegSwing(ctx, angleIdx, t);
+
+  return c;
+}
+
+function drawArmSwing(ctx, angleIdx, t){
+  const cycle=Math.PI*2*t;
+  const isProfile=(angleIdx===2||angleIdx===6);
+  const isFront=(angleIdx===0);
+  const isBack=(angleIdx===4);
+
+  if(!isProfile && !isFront && !isBack) return;
+
+  ctx.save();
+  ctx.globalAlpha=0.0; // Arms are part of sprite, skip overdraw
+  ctx.restore();
+}
+
+function drawLegSwing(ctx, angleIdx, t){ }
+
+function buildIdleFrame(angleIdx, frameNum, totalFrames){
+  const c=document.createElement('canvas'); c.width=CELL; c.height=CELL;
+  const ctx=c.getContext('2d');
+
+  const t=frameNum/totalFrames;
+  const cycle=Math.PI*2*t;
+
+  const base=extractAngle(angleIdx);
+
+  // Idle: gentle breathe bob + slight head turn hint
+  const breathe=Math.sin(cycle)*3;
+  const sway=Math.sin(cycle*0.5)*1.5;
+
+  ctx.save();
+  ctx.translate(CELL/2+sway, CELL/2);
+  ctx.scale(1, 1+breathe*0.003);
+  ctx.translate(-CELL/2,-CELL/2);
+  ctx.drawImage(base,0,0);
+  ctx.restore();
+
+  // Breathing chest highlight
+  ctx.save();
+  const cx=CELL*0.5, cy=CELL*0.42;
+  const r=CELL*0.07*(1+breathe*0.008);
+  const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+  grad.addColorStop(0,'rgba(255,255,240,'+(.04+breathe*.008)+')');
+  grad.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=grad;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  return c;
+}
+
+async function buildAllFrames(){
+  walkFrames=[];
+  idleFrames=[];
+  const WALK=24, IDLE=12;
+
+  for(let a=0;a<ANGLES;a++){
+    walkFrames[a]=[];
+    idleFrames[a]=[];
+    for(let f=0;f<WALK;f++) walkFrames[a].push(buildWalkFrame(a,f,WALK));
+    for(let f=0;f<IDLE;f++) idleFrames[a].push(buildIdleFrame(a,f,IDLE));
+    setProgress(30+Math.round((a+1)/ANGLES*40));
+    await tick();
+  }
+}
+
+function tick(){ return new Promise(r=>setTimeout(r,0)); }
+
+function buildTurnaroundGrid(){
+  const grid=document.getElementById('turnaroundGrid');
+  grid.innerHTML='';
+  for(let a=0;a<ANGLES;a++){
+    const cell=document.createElement('div');
+    cell.className='angle-cell';
+    const cv=document.createElement('canvas');
+    cv.width=CELL; cv.height=CELL;
+    cv.style.width='80px'; cv.style.height='80px';
+    cv.style.imageRendering='auto';
+    cv.style.borderRadius='4px';
+    const ctx=cv.getContext('2d');
+    ctx.drawImage(walkFrames[a][0],0,0);
+    const label=document.createElement('span');
+    label.textContent=ANGLE_NAMES[a];
+    cell.appendChild(cv);
+    cell.appendChild(label);
+    grid.appendChild(cell);
+  }
+}
+
+function buildSpriteSheet(){
+  const WALK=24, IDLE=12;
+  const TOTAL_ROWS=ANGLES*2;
+  const MAX_COLS=WALK;
+  const sc=document.getElementById('sheetCanvas');
+  sc.width=MAX_COLS*CELL;
+  sc.height=TOTAL_ROWS*CELL;
+  const ctx=sc.getContext('2d');
+
+  ctx.fillStyle='rgba(0,0,0,0)';
+  ctx.clearRect(0,0,sc.width,sc.height);
+
+  for(let a=0;a<ANGLES;a++){
+    // Walk row
+    for(let f=0;f<WALK;f++){
+      ctx.drawImage(walkFrames[a][f], f*CELL, a*2*CELL);
+    }
+    // Idle row (12 frames, rest empty)
+    for(let f=0;f<IDLE;f++){
+      ctx.drawImage(idleFrames[a][f], f*CELL, (a*2+1)*CELL);
+    }
+    // Row labels
+    ctx.save();
+    ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.font='bold 20px monospace';
+    ctx.fillText(ANGLE_NAMES[a]+' — Walk', 8, a*2*CELL+28);
+    ctx.fillText(ANGLE_NAMES[a]+' — Idle', 8, (a*2+1)*CELL+28);
+    ctx.restore();
+  }
+
+  // Grid overlay
+  ctx.save();
+  ctx.strokeStyle='rgba(124,92,191,0.2)';
+  ctx.lineWidth=1;
+  for(let x=0;x<=MAX_COLS;x++){
+    ctx.beginPath(); ctx.moveTo(x*CELL,0); ctx.lineTo(x*CELL,sc.height); ctx.stroke();
+  }
+  for(let y=0;y<=TOTAL_ROWS;y++){
+    ctx.beginPath(); ctx.moveTo(0,y*CELL); ctx.lineTo(sc.width,y*CELL); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function renderSheet(){
+  const sc=document.getElementById('sheetCanvas');
+  const wrapper=document.querySelector('.sheet-scroll');
+  sc.style.maxWidth='none';
+  sc.style.width=(sc.width/4)+'px';
+  sc.style.height=(sc.height/4)+'px';
+}
+
+function updateStats(){
+  const WALK=24, IDLE=12;
+  document.getElementById('statAngles').textContent=ANGLES;
+  document.getElementById('statFrames').textContent=(WALK+IDLE)*ANGLES;
+  document.getElementById('statSize').textContent=CELL+'px';
+  const sc=document.getElementById('sheetCanvas');
+  document.getElementById('statSheet').textContent=Math.round(sc.width/1024)+'K×'+Math.round(sc.height/1024)+'K';
+}
+
+function restartAnim(){
+  if(animTimer) clearInterval(animTimer);
+  frameIndex=0;
+  animTimer=setInterval(()=>{
+    const frames=currentAnim==='walk'?walkFrames:idleFrames;
+    if(!frames.length||!frames[currentAngle]) return;
+    const total=frames[currentAngle].length;
+    frameIndex=(frameIndex+1)%total;
+    const cv=document.getElementById('previewCanvas');
+    const ctx=cv.getContext('2d');
+    ctx.clearRect(0,0,cv.width,cv.height);
+
+    // Checkerboard bg
+    const ts=16;
+    for(let x=0;x<cv.width;x+=ts)
+      for(let y=0;y<cv.height;y+=ts){
+        ctx.fillStyle=((x/ts+y/ts)%2)?'#1a1a26':'#141420';
+        ctx.fillRect(x,y,ts,ts);
+      }
+
+    ctx.drawImage(frames[currentAngle][frameIndex],0,0,cv.width,cv.height);
+    document.getElementById('frameCounter').textContent=`Frame ${frameIndex+1}/${total} — ${ANGLE_NAMES[currentAngle]}`;
+  }, 1000/fps);
+}
+
+function exportSpriteSheet(){
+  if(!isReady) return;
+  const sc=document.getElementById('sheetCanvas');
+  const link=document.createElement('a');
+  link.download='spritesheet_1024x1024_cells.png';
+  link.href=sc.toDataURL('image/png');
+  link.click();
+  setStatus('Sprite sheet exported!','ok');
+}
+
+function exportTurnaround(){
+  if(!isReady) return;
+  const c=document.createElement('canvas');
+  c.width=CELL*ANGLES; c.height=CELL;
+  const ctx=c.getContext('2d');
+  for(let a=0;a<ANGLES;a++){
+    ctx.drawImage(walkFrames[a][0], a*CELL, 0);
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.font='bold 18px monospace';
+    ctx.fillText(ANGLE_NAMES[a], a*CELL+8, 24);
+  }
+  // Dividers
+  ctx.strokeStyle='rgba(124,92,191,0.4)';
+  for(let a=1;a<ANGLES;a++){ctx.beginPath();ctx.moveTo(a*CELL,0);ctx.lineTo(a*CELL,CELL);ctx.stroke();}
+  const link=document.createElement('a');
+  link.download='character_turnaround_8angles.png';
+  link.href=c.toDataURL('image/png');
+  link.click();
+  setStatus('Turnaround sheet exported!','ok');
+}
+
+// Init preview loop even before load
+(function initPreview(){
+  const cv=document.getElementById('previewCanvas');
+  const ctx=cv.getContext('2d');
+  const ts=16;
+  for(let x=0;x<cv.width;x+=ts)
+    for(let y=0;y<cv.height;y+=ts){
+      ctx.fillStyle=((x/ts+y/ts)%2)?'#1a1a26':'#141420';
+      ctx.fillRect(x,y,ts,ts);
+    }
+  ctx.fillStyle='rgba(255,255,255,0.15)';
+  ctx.font='14px system-ui';
+  ctx.textAlign='center';
+  ctx.fillText('Load a character to begin',cv.width/2,cv.height/2-10);
+  ctx.fillText('↑ Click "Load Character"',cv.width/2,cv.height/2+14);
+})();
+</script>
 </body>
 </html>
