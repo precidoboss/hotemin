@@ -3,626 +3,780 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sprite Sheet Studio — Character Turnaround</title>
+<title>Blaze API Tester</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#0a0a0f;--surface:#12121a;--panel:#1a1a26;--border:#2a2a3e;
-  --accent:#7c5cbf;--accent2:#4fc3f7;--text:#e8e8f0;--muted:#6b6b85;
-  --green:#4ade80;--amber:#fbbf24;--red:#f87171;
-}
-body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh}
-h1,h2,h3{font-weight:600;letter-spacing:-0.02em}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blaze: #F0B90B;
+    --blaze-dark: #c99a00;
+    --bg: #0d0d0d;
+    --card: #161616;
+    --border: #2a2a2a;
+    --text: #e0e0e0;
+    --muted: #666;
+    --green: #22c55e;
+    --red: #ef4444;
+    --blue: #3b82f6;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
 
-/* HEADER */
-.header{
-  display:flex;align-items:center;gap:16px;
-  padding:18px 28px;border-bottom:1px solid var(--border);
-  background:var(--surface);
-}
-.logo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
-.header h1{font-size:17px;color:var(--text)}
-.header p{font-size:12px;color:var(--muted);margin-top:2px}
-.badge{font-size:11px;padding:3px 8px;border-radius:4px;background:#1e1e30;border:1px solid var(--border);color:var(--accent2)}
+  header { background: var(--card); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+  header .logo { font-size: 20px; font-weight: 700; color: var(--blaze); }
+  header .subtitle { color: var(--muted); font-size: 12px; }
 
-/* LAYOUT */
-.app{display:grid;grid-template-columns:280px 1fr;height:calc(100vh - 61px)}
+  .layout { display: grid; grid-template-columns: 260px 1fr; height: calc(100vh - 57px); }
 
-/* SIDEBAR */
-.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:16px;overflow-y:auto}
-.section-label{font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+  /* SIDEBAR */
+  .sidebar { background: var(--card); border-right: 1px solid var(--border); overflow-y: auto; }
+  .sidebar-section { padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .sidebar-section-title { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--muted); padding: 8px 16px 4px; text-transform: uppercase; }
+  .sidebar-btn { width: 100%; text-align: left; background: none; border: none; color: var(--text); padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; transition: background 0.1s; }
+  .sidebar-btn:hover { background: rgba(240,185,11,0.08); }
+  .sidebar-btn.active { background: rgba(240,185,11,0.15); color: var(--blaze); }
+  .method-badge { font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 3px; letter-spacing: 0.5px; flex-shrink: 0; }
+  .GET  { background: rgba(34,197,94,0.15);  color: var(--green); }
+  .POST { background: rgba(59,130,246,0.15); color: var(--blue); }
+  .DELETE { background: rgba(239,68,68,0.15); color: var(--red); }
 
-.url-input{width:100%;background:#0d0d18;border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;font-family:monospace}
-.url-input:focus{border-color:var(--accent)}
+  /* MAIN */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
 
-.btn{
-  width:100%;padding:9px 14px;border-radius:6px;font-size:13px;font-weight:500;
-  cursor:pointer;border:none;transition:all .15s;
-}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:#9070d4}
-.btn-primary:disabled{background:#333;color:var(--muted);cursor:not-allowed}
-.btn-secondary{background:#1e1e30;color:var(--text);border:1px solid var(--border)}
-.btn-secondary:hover{background:#252538}
-.btn-export{background:linear-gradient(135deg,#1a472a,#166534);color:#4ade80;border:1px solid #166534}
-.btn-export:hover{background:linear-gradient(135deg,#166534,#15803d)}
-.btn-export:disabled{background:#1a1a2e;color:var(--muted);border-color:var(--border);cursor:not-allowed}
+  /* AUTH BAR */
+  .auth-bar { background: #111; border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .auth-bar label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+  .auth-bar input { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 12px; width: 220px; }
+  .auth-bar input:focus { outline: 1px solid var(--blaze); }
+  .btn { background: var(--blaze); color: #000; border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 12px; white-space: nowrap; }
+  .btn:hover { background: var(--blaze-dark); }
+  .btn-outline { background: none; border: 1px solid var(--border); color: var(--text); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+  .btn-outline:hover { border-color: var(--blaze); color: var(--blaze); }
+  .token-status { font-size: 11px; padding: 4px 8px; border-radius: 4px; }
+  .token-status.ok { background: rgba(34,197,94,0.1); color: var(--green); }
+  .token-status.none { background: rgba(239,68,68,0.1); color: var(--red); }
 
-.config-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.config-label{font-size:12px;color:var(--muted)}
-.config-val{font-size:12px;font-weight:600;color:var(--accent2)}
-input[type=range]{width:100%;accent-color:var(--accent);margin:4px 0 10px}
+  /* PANEL */
+  .panel { flex: 1; display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+  .endpoint-info { padding: 20px 24px 0; }
+  .endpoint-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .endpoint-desc { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .endpoint-url { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-family: monospace; font-size: 13px; color: var(--blaze); display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
 
-.anim-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
-.anim-btn{padding:7px 6px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:#1a1a26;color:var(--muted);transition:all .15s;text-align:center}
-.anim-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .content-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; overflow: hidden; }
+  .pane { display: flex; flex-direction: column; overflow: hidden; border-top: 1px solid var(--border); }
+  .pane-header { padding: 10px 24px; background: #111; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); display: flex; align-items: center; justify-content: space-between; }
+  .pane-body { flex: 1; overflow-y: auto; padding: 16px 24px; }
+  .left-pane { border-right: 1px solid var(--border); }
 
-.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px}
-.dot-ok{background:var(--green)}
-.dot-warn{background:var(--amber)}
-.dot-err{background:var(--red)}
-.dot-idle{background:var(--muted)}
+  /* FORM FIELDS */
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .field input, .field select, .field textarea { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 6px; font-size: 13px; font-family: inherit; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: 1px solid var(--blaze); }
+  .field textarea { min-height: 80px; resize: vertical; font-family: monospace; }
+  .field select option { background: #222; }
+  .field .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
-#statusMsg{font-size:12px;color:var(--muted);padding:8px 10px;background:#0d0d18;border-radius:6px;min-height:36px;display:flex;align-items:center}
+  /* RESPONSE */
+  .response-meta { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .status-badge { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 5px; }
+  .status-2xx { background: rgba(34,197,94,0.15); color: var(--green); }
+  .status-4xx { background: rgba(239,68,68,0.15); color: var(--red); }
+  .status-err { background: rgba(239,68,68,0.15); color: var(--red); }
+  .response-time { font-size: 11px; color: var(--muted); }
+  pre { background: #0a0a0a; border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-size: 12px; overflow: auto; white-space: pre-wrap; word-break: break-all; max-height: 100%; }
+  .empty-state { color: var(--muted); font-size: 13px; padding: 20px 0; }
 
-.preview-thumb{width:100%;border-radius:6px;border:1px solid var(--border);overflow:hidden;background:#0d0d18;display:flex;align-items:center;justify-content:center;min-height:80px}
-.preview-thumb img,#thumbImg{max-width:100%;max-height:100px;object-fit:contain;display:block}
+  /* OAUTH FLOW */
+  .oauth-flow { padding: 24px; }
+  .oauth-step { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .oauth-step h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; color: var(--blaze); }
+  .oauth-step p { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
+  .tag { display: inline-block; background: var(--border); color: var(--muted); font-size: 10px; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
 
-/* MAIN */
-.main{overflow:auto;padding:24px;display:flex;flex-direction:column;gap:24px}
+  /* WELCOME */
+  #welcome-panel { padding: 32px 24px; }
+  #welcome-panel h2 { font-size: 22px; font-weight: 700; color: var(--blaze); margin-bottom: 8px; }
+  #welcome-panel p { color: var(--muted); line-height: 1.7; margin-bottom: 20px; max-width: 600px; }
+  .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; }
+  .feature-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .feature-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .feature-card p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .feature-icon { font-size: 20px; margin-bottom: 8px; }
 
-/* VIEWPORT */
-.viewport-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.viewport-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
-.viewport-header h2{font-size:14px;font-weight:600}
-.viewport-tabs{display:flex;gap:4px}
-.vtab{font-size:11px;padding:4px 10px;border-radius:4px;cursor:pointer;color:var(--muted);background:transparent;border:1px solid transparent}
-.vtab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.viewport-body{padding:20px;display:flex;align-items:center;justify-content:center;min-height:300px;background:#080810;position:relative}
-
-canvas{display:block;max-width:100%;image-rendering:auto}
-
-/* TURNAROUND GRID */
-.turnaround-grid{
-  display:grid;grid-template-columns:repeat(8,1fr);gap:8px;
-  padding:16px;background:#080810;
-}
-.angle-cell{
-  display:flex;flex-direction:column;align-items:center;gap:4px;
-  background:#0d0d18;border-radius:6px;padding:8px 4px;border:1px solid var(--border);
-}
-.angle-cell canvas{width:80px;height:80px;border-radius:4px}
-.angle-cell span{font-size:9px;color:var(--muted);font-weight:500}
-
-/* SHEET PREVIEW */
-.sheet-scroll{overflow-x:auto;padding:16px;background:#080810}
-.sheet-scroll canvas{border:1px solid var(--border);border-radius:4px}
-
-/* STATS */
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
-.stat-num{font-size:22px;font-weight:700;color:var(--accent2)}
-.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
-
-/* PROGRESS */
-.progress-bar{height:3px;background:#1a1a26;border-radius:2px;overflow:hidden;margin-top:6px}
-.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .3s}
-
-@keyframes spin{to{transform:rotate(360deg)}}
-.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle}
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="logo">🎮</div>
+<header>
   <div>
-    <h1>Sprite Sheet Studio</h1>
-    <p>Professional character turnaround &amp; animation generator</p>
+    <div class="logo">⚡ Blaze API Tester</div>
+    <div class="subtitle">Test all Blaze Stream endpoints</div>
   </div>
-  <div style="margin-left:auto;display:flex;gap:8px">
-    <span class="badge">1024×1024 cells</span>
-    <span class="badge">24-frame walk</span>
-    <span class="badge">12-frame idle</span>
-  </div>
-</div>
+</header>
 
-<div class="app">
-
-<!-- SIDEBAR -->
-<div class="sidebar">
-
-  <div>
-    <div class="section-label">Source Image</div>
-    <input class="url-input" id="urlInput" type="text"
-      value="https://raw.githubusercontent.com/precidoboss/spaceship/main/IMG_7509.png"
-      placeholder="GitHub raw image URL…">
-    <div style="height:8px"></div>
-    <button class="btn btn-primary" id="loadBtn" onclick="loadCharacter()">Load Character</button>
-    <div style="height:8px"></div>
-    <div class="preview-thumb" id="thumbBox">
-      <span style="font-size:11px;color:var(--muted)">No image loaded</span>
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Auth</div>
+      <button class="sidebar-btn active" onclick="showPanel('welcome')">🏠 Home</button>
+      <button class="sidebar-btn" onclick="showPanel('app-token')"><span class="method-badge POST">POST</span> App Token</button>
+      <button class="sidebar-btn" onclick="showPanel('oauth-flow')">🔐 OAuth Flow (User)</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Channels</div>
+      <button class="sidebar-btn" onclick="showPanel('list-channels')"><span class="method-badge GET">GET</span> List Channels</button>
+      <button class="sidebar-btn" onclick="showPanel('channel-stats')"><span class="method-badge GET">GET</span> Channel Stats</button>
+      <button class="sidebar-btn" onclick="showPanel('live-stats')"><span class="method-badge GET">GET</span> Live Stats</button>
+      <button class="sidebar-btn" onclick="showPanel('channel-followers')"><span class="method-badge GET">GET</span> Followers</button>
+      <button class="sidebar-btn" onclick="showPanel('followed-channels')"><span class="method-badge GET">GET</span> Followed Channels</button>
+      <button class="sidebar-btn" onclick="showPanel('subscribers')"><span class="method-badge GET">GET</span> Subscribers</button>
+      <button class="sidebar-btn" onclick="showPanel('activities')"><span class="method-badge GET">GET</span> Activities</button>
+      <button class="sidebar-btn" onclick="showPanel('clips')"><span class="method-badge GET">GET</span> Clips</button>
+      <button class="sidebar-btn" onclick="showPanel('vods')"><span class="method-badge GET">GET</span> VODs</button>
+      <button class="sidebar-btn" onclick="showPanel('vips')"><span class="method-badge GET">GET</span> VIP Users</button>
+      <button class="sidebar-btn" onclick="showPanel('mods')"><span class="method-badge GET">GET</span> Mod Users</button>
+      <button class="sidebar-btn" onclick="showPanel('ogs')"><span class="method-badge GET">GET</span> OG Users</button>
+      <button class="sidebar-btn" onclick="showPanel('banned-users')"><span class="method-badge GET">GET</span> Banned Users</button>
+      <button class="sidebar-btn" onclick="showPanel('update-channel')"><span class="method-badge POST">POST</span> Update Channel Info</button>
+      <button class="sidebar-btn" onclick="showPanel('add-vip')"><span class="method-badge POST">POST</span> Add VIP</button>
+      <button class="sidebar-btn" onclick="showPanel('remove-vip')"><span class="method-badge DELETE">DELETE</span> Remove VIP</button>
+      <button class="sidebar-btn" onclick="showPanel('add-og')"><span class="method-badge POST">POST</span> Add OG</button>
+      <button class="sidebar-btn" onclick="showPanel('remove-og')"><span class="method-badge DELETE">DELETE</span> Remove OG</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Users</div>
+      <button class="sidebar-btn" onclick="showPanel('user-profile')"><span class="method-badge GET">GET</span> Get Profile</button>
+      <button class="sidebar-btn" onclick="showPanel('achievement-stats')"><span class="method-badge GET">GET</span> Achievement Stats</button>
+      <button class="sidebar-btn" onclick="showPanel('user-subscriptions')"><span class="method-badge GET">GET</span> Subscriptions</button>
+      <button class="sidebar-btn" onclick="showPanel('update-bio')"><span class="method-badge POST">POST</span> Update Bio</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Chat</div>
+      <button class="sidebar-btn" onclick="showPanel('chat-messages')"><span class="method-badge GET">GET</span> Get Messages</button>
+      <button class="sidebar-btn" onclick="showPanel('send-chat')"><span class="method-badge POST">POST</span> Send Message</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Categories</div>
+      <button class="sidebar-btn" onclick="showPanel('list-categories')"><span class="method-badge GET">GET</span> List Categories</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Moderation</div>
+      <button class="sidebar-btn" onclick="showPanel('ban-user')"><span class="method-badge POST">POST</span> Ban User</button>
+      <button class="sidebar-btn" onclick="showPanel('unban-user')"><span class="method-badge DELETE">DELETE</span> Unban User</button>
+      <button class="sidebar-btn" onclick="showPanel('mute-user')"><span class="method-badge POST">POST</span> Mute User</button>
     </div>
   </div>
 
-  <div>
-    <div class="section-label">Animation</div>
-    <div class="anim-btns">
-      <div class="anim-btn active" id="btnWalk" onclick="setAnim('walk')">🚶 Walk<br><small>24 frames</small></div>
-      <div class="anim-btn" id="btnIdle" onclick="setAnim('idle')">🧍 Idle<br><small>12 frames</small></div>
-    </div>
-    <div class="config-row">
-      <span class="config-label">Speed (FPS)</span>
-      <span class="config-val" id="fpsVal">12</span>
-    </div>
-    <input type="range" min="4" max="30" value="12" id="fpsSlider" oninput="updateFPS(this.value)">
-    <div class="config-row">
-      <span class="config-label">Scale</span>
-      <span class="config-val" id="scaleVal">70%</span>
-    </div>
-    <input type="range" min="40" max="90" value="70" id="scaleSlider" oninput="updateScale(this.value)">
-    <div class="config-row">
-      <span class="config-label">View Angle</span>
-      <span class="config-val" id="angleVal">Front</span>
-    </div>
-    <input type="range" min="0" max="7" value="0" id="angleSlider" oninput="updateAngle(this.value)">
-  </div>
-
-  <div>
-    <div class="section-label">Export</div>
-    <button class="btn btn-export" id="exportSheetBtn" onclick="exportSpriteSheet()" disabled>
-      ⬇ Export Sprite Sheet PNG
-    </button>
-    <div style="height:6px"></div>
-    <button class="btn btn-secondary" id="exportTurnaround" onclick="exportTurnaround()" disabled>
-      ⬇ Export Turnaround PNG
-    </button>
-  </div>
-
-  <div>
-    <div class="section-label">Status</div>
-    <div id="statusMsg"><span class="status-dot dot-idle"></span>Ready to load</div>
-    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-  </div>
-
-</div>
-
-<!-- MAIN PANEL -->
-<div class="main">
-
-  <!-- STATS -->
-  <div class="stats-row">
-    <div class="stat-card"><div class="stat-num" id="statAngles">0</div><div class="stat-label">Angles</div></div>
-    <div class="stat-card"><div class="stat-num" id="statFrames">0</div><div class="stat-label">Total Frames</div></div>
-    <div class="stat-card"><div class="stat-num" id="statSize">—</div><div class="stat-label">Cell Size</div></div>
-    <div class="stat-card"><div class="stat-num" id="statSheet">—</div><div class="stat-label">Sheet Size</div></div>
-  </div>
-
-  <!-- LIVE PREVIEW -->
-  <div class="viewport-card">
-    <div class="viewport-header">
-      <h2>Live Preview</h2>
-      <div class="viewport-tabs">
-        <div class="vtab active" onclick="switchView('preview',this)">Animation</div>
-        <div class="vtab" onclick="switchView('turnaround',this)">Turnaround</div>
-        <div class="vtab" onclick="switchView('sheet',this)">Sprite Sheet</div>
+  <!-- MAIN -->
+  <div class="main">
+    <!-- AUTH BAR -->
+    <div class="auth-bar">
+      <div>
+        <label>Client ID</label>
+        <input id="clientId" value="UR4ghwgTTJ2rAE1_KBZgmCKmkvQtO4ux" placeholder="Client ID">
       </div>
-    </div>
-
-    <!-- ANIMATION VIEW -->
-    <div id="viewPreview" class="viewport-body">
-      <canvas id="previewCanvas" width="256" height="256"></canvas>
-      <div style="position:absolute;bottom:12px;right:12px;font-size:11px;color:var(--muted)" id="frameCounter">Frame 0/0</div>
-    </div>
-
-    <!-- TURNAROUND VIEW -->
-    <div id="viewTurnaround" style="display:none">
-      <div class="turnaround-grid" id="turnaroundGrid"></div>
-    </div>
-
-    <!-- SHEET VIEW -->
-    <div id="viewSheet" style="display:none">
-      <div class="sheet-scroll">
-        <canvas id="sheetCanvas"></canvas>
+      <div>
+        <label>Client Secret</label>
+        <input id="clientSecret" value="IFwFHaqzi_sA0FfJ9nWiQSR0ug3GPUWZMr0qw3LvMZ0" type="password" placeholder="Client Secret">
       </div>
+      <div>
+        <label>Access Token</label>
+        <input id="accessToken" placeholder="Bearer token (get from App Token or OAuth)">
+      </div>
+      <div id="tokenStatus" class="token-status none">No Token</div>
+    </div>
+
+    <!-- PANELS -->
+    <div id="panel-container" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+
+      <!-- WELCOME -->
+      <div id="welcome-panel">
+        <h2>Blaze API Explorer</h2>
+        <p>All credentials are pre-filled. Start by generating an <strong style="color:var(--blaze)">App Access Token</strong> (sidebar → App Token), then explore any endpoint. For user-scoped endpoints you'll need to complete the OAuth flow.</p>
+        <div class="feature-grid">
+          <div class="feature-card"><div class="feature-icon">📺</div><h4>Channels</h4><p>Browse live channels, stats, followers, subscribers, VODs, clips, and roles.</p></div>
+          <div class="feature-card"><div class="feature-icon">👤</div><h4>Users</h4><p>Fetch profiles, achievement stats, and subscription lists.</p></div>
+          <div class="feature-card"><div class="feature-icon">💬</div><h4>Chat</h4><p>Read and send chat messages via REST.</p></div>
+          <div class="feature-card"><div class="feature-icon">🎮</div><h4>Categories</h4><p>Search the full stream category catalog.</p></div>
+          <div class="feature-card"><div class="feature-icon">🔨</div><h4>Moderation</h4><p>Ban, unban, and mute users in your channel.</p></div>
+          <div class="feature-card"><div class="feature-icon">🔐</div><h4>OAuth</h4><p>Full user OAuth flow with PKCE for user-scoped tokens.</p></div>
+        </div>
+      </div>
+
+      <!-- APP TOKEN -->
+      <div id="app-token-panel" style="display:none;" class="panel">
+        <div class="endpoint-info">
+          <div class="endpoint-title">Generate App Access Token</div>
+          <div class="endpoint-desc">Client credentials flow — no user login required. Works for public data endpoints.</div>
+          <div class="endpoint-url"><span class="method-badge POST">POST</span> https://blaze.stream/bapi/oauth2/token</div>
+        </div>
+        <div class="content-split" style="flex:1;overflow:hidden;">
+          <div class="pane left-pane">
+            <div class="pane-header">Request</div>
+            <div class="pane-body">
+              <p style="color:var(--muted);font-size:12px;margin-bottom:16px;">Uses Client ID and Secret from the auth bar above. Grant type is automatically set to <span class="tag">client_credentials</span>.</p>
+              <button class="btn" onclick="getAppToken()">Generate App Token</button>
+            </div>
+          </div>
+          <div class="pane">
+            <div class="pane-header">Response</div>
+            <div class="pane-body" id="app-token-response"><div class="empty-state">Click "Generate App Token" to run</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OAUTH FLOW -->
+      <div id="oauth-flow-panel" style="display:none;overflow-y:auto;">
+        <div class="oauth-flow">
+          <div style="font-size:18px;font-weight:700;margin-bottom:4px;">OAuth User Flow</div>
+          <div style="color:var(--muted);font-size:13px;margin-bottom:20px;">Step-by-step PKCE flow to get a User Access Token</div>
+          <div class="oauth-step">
+            <h3>Step 1 — Generate Auth URL</h3>
+            <p>Generate the authorization URL with PKCE. The user will be redirected here to grant permissions.</p>
+            <div class="field"><label>Redirect URI</label><input id="oauth-redirect" value="http://localhost:3000/callback"></div>
+            <div class="field"><label>Scopes (comma separated)</label><input id="oauth-scopes" value="users.read,offline.access,channel.moderate,users.bot"></div>
+            <button class="btn" onclick="generateAuthUrl()">Generate Auth URL</button>
+            <div id="auth-url-result" style="margin-top:12px;"></div>
+          </div>
+          <div class="oauth-step">
+            <h3>Step 2 — Handle Callback</h3>
+            <p>After the user authorizes, Blaze redirects back with a <span class="tag">code</span> and <span class="tag">state</span>. Paste the full callback URL or just the code here.</p>
+            <div class="field"><label>Authorization Code (from callback URL)</label><input id="oauth-code" placeholder="code from ?code=..."></div>
+            <button class="btn" onclick="exchangeCode()">Exchange for Token</button>
+            <div id="exchange-result" style="margin-top:12px;"></div>
+          </div>
+          <div class="oauth-step">
+            <h3>Step 3 — Refresh Token</h3>
+            <p>Use the refresh token to get a new access token without re-auth.</p>
+            <div class="field"><label>Refresh Token</label><input id="refresh-token-input" placeholder="Paste refresh token"></div>
+            <button class="btn" onclick="refreshToken()">Refresh Token</button>
+            <div id="refresh-result" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GENERIC ENDPOINT PANELS generated by JS -->
+      <div id="endpoint-panel" style="display:none;" class="panel">
+        <div class="endpoint-info">
+          <div class="endpoint-title" id="ep-title"></div>
+          <div class="endpoint-desc" id="ep-desc"></div>
+          <div class="endpoint-url" id="ep-url"></div>
+        </div>
+        <div class="content-split" style="flex:1;overflow:hidden;">
+          <div class="pane left-pane">
+            <div class="pane-header">Parameters</div>
+            <div class="pane-body" id="ep-fields"></div>
+          </div>
+          <div class="pane">
+            <div class="pane-header">
+              Response
+              <button class="btn-outline" onclick="copyResponse()" style="font-size:10px;padding:4px 8px;">Copy</button>
+            </div>
+            <div class="pane-body" id="ep-response"><div class="empty-state">Hit "Run" to execute</div></div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
-
-</div>
 </div>
 
 <script>
-const CELL = 256;
-const ANGLES = 8;
-const ANGLE_NAMES = ['Front','¾ Front R','Side R','¾ Back R','Back','¾ Back L','Side L','¾ Front L'];
-const SRC_ROWS = 2, SRC_COLS = 4;
+const CLIENT_ID = () => document.getElementById('clientId').value.trim();
+const CLIENT_SECRET = () => document.getElementById('clientSecret').value.trim();
+const ACCESS_TOKEN = () => document.getElementById('accessToken').value.trim();
+const BASE = 'https://api.blaze.stream/v1';
+const AUTH_BASE = 'https://blaze.stream/bapi/oauth2';
 
-let srcImg = null;
-let currentAnim = 'walk';
-let fps = 12, charScale = 0.70, currentAngle = 0;
-let frameIndex = 0, animTimer = null;
-let walkFrames = [], idleFrames = [];
-let isReady = false;
+let pkceState = null, pkceVerifier = null;
+let lastResponse = '';
 
-// Source grid layout: reference turnaround sheet is 4 columns x 2 rows = 8 cells,
-// each cell already containing a unique fully-rendered pose:
-//   row0: Front, ¾Front R, Side R, ¾Back R
-//   row1: Back,  ¾Back L,  Side L, ¾Front L
-// No mirroring needed — every angle is mapped 1:1 to its own cell.
-const SRC_MAP = [
-  {r:0,c:0,flip:false},  // 0 Front
-  {r:0,c:1,flip:false},  // 1 ¾Front R
-  {r:0,c:2,flip:false},  // 2 Side R
-  {r:0,c:3,flip:false},  // 3 ¾Back R
-  {r:1,c:0,flip:false},  // 4 Back
-  {r:1,c:1,flip:false},  // 5 ¾Back L
-  {r:1,c:2,flip:false},  // 6 Side L
-  {r:1,c:3,flip:false},  // 7 ¾Front L
-];
-
-function setStatus(msg, type='idle'){
-  const colors={'idle':'var(--muted)','ok':'var(--green)','warn':'var(--amber)','err':'var(--red)','load':'var(--accent2)'};
-  const icons={'idle':'⬤','ok':'✓','warn':'⚠','err':'✕','load':'◌'};
-  document.getElementById('statusMsg').innerHTML =
-    `<span style="color:${colors[type]};margin-right:6px">${icons[type]}</span>${msg}`;
+// ── Token status watcher ──
+document.getElementById('accessToken').addEventListener('input', updateTokenStatus);
+function updateTokenStatus() {
+  const el = document.getElementById('tokenStatus');
+  const t = ACCESS_TOKEN();
+  el.textContent = t ? '✓ Token Set' : 'No Token';
+  el.className = 'token-status ' + (t ? 'ok' : 'none');
 }
 
-function setProgress(p){
-  document.getElementById('progressFill').style.width = p+'%';
+// ── Panel switcher ──
+function showPanel(name) {
+  document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  const panels = ['welcome-panel','app-token-panel','oauth-flow-panel','endpoint-panel'];
+  panels.forEach(p => { const el = document.getElementById(p); if (el) el.style.display = 'none'; });
+
+  const simple = ['welcome','app-token','oauth-flow'];
+  if (simple.includes(name)) {
+    document.getElementById(name + '-panel').style.display = name === 'oauth-flow' ? 'block' : 'flex';
+    if (name === 'oauth-flow') document.getElementById(name + '-panel').style.flexDirection = 'column';
+    return;
+  }
+
+  // load endpoint config
+  const cfg = ENDPOINTS[name];
+  if (!cfg) return;
+  document.getElementById('ep-title').textContent = cfg.title;
+  document.getElementById('ep-desc').textContent = cfg.desc;
+  document.getElementById('ep-url').innerHTML = `<span class="method-badge ${cfg.method}">${cfg.method}</span> ${BASE}${cfg.path}`;
+  document.getElementById('ep-fields').innerHTML = buildFields(cfg) + `<button class="btn" style="margin-top:12px;" onclick="runEndpoint('${name}')">Run →</button>`;
+  document.getElementById('ep-response').innerHTML = '<div class="empty-state">Hit "Run" to execute</div>';
+  document.getElementById('endpoint-panel').style.display = 'flex';
+  document.getElementById('endpoint-panel').style.flexDirection = 'column';
 }
 
-function updateFPS(v){ fps=+v; document.getElementById('fpsVal').textContent=v; restartAnim(); }
-function updateScale(v){ charScale=v/100; document.getElementById('scaleVal').textContent=v+'%'; if(isReady)buildAllFrames(); }
-function updateAngle(v){ currentAngle=+v; document.getElementById('angleVal').textContent=ANGLE_NAMES[v]; }
-function setAnim(a){
-  currentAnim=a;
-  document.getElementById('btnWalk').classList.toggle('active',a==='walk');
-  document.getElementById('btnIdle').classList.toggle('active',a==='idle');
-  frameIndex=0; restartAnim();
+function buildFields(cfg) {
+  if (!cfg.fields || cfg.fields.length === 0) {
+    return '<p style="color:var(--muted);font-size:12px;margin-bottom:12px;">No parameters required — token from auth bar is used.</p>';
+  }
+  return cfg.fields.map(f => `
+    <div class="field">
+      <label>${f.label}${f.required ? ' <span style="color:var(--red)">*</span>' : ''}</label>
+      ${f.type === 'select'
+        ? `<select id="field-${f.key}">${f.options.map(o => `<option value="${o.v}">${o.l}</option>`).join('')}</select>`
+        : `<input id="field-${f.key}" type="${f.type||'text'}" placeholder="${f.placeholder||''}" value="${f.default||''}">`}
+      ${f.hint ? `<div class="hint">${f.hint}</div>` : ''}
+    </div>
+  `).join('');
 }
 
-function switchView(v,tab){
-  ['preview','turnaround','sheet'].forEach(id=>{
-    document.getElementById('view'+id.charAt(0).toUpperCase()+id.slice(1)).style.display='none';
-  });
-  document.getElementById('view'+v.charAt(0).toUpperCase()+v.slice(1)).style.display='';
-  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
-  tab.classList.add('active');
+function getField(key) {
+  const el = document.getElementById('field-' + key);
+  return el ? el.value.trim() : '';
 }
 
-async function loadCharacter(){
-  const url = document.getElementById('urlInput').value.trim();
-  if(!url){setStatus('Please enter a URL','err');return;}
+// ── Request runner ──
+async function runEndpoint(name) {
+  const cfg = ENDPOINTS[name];
+  const el = document.getElementById('ep-response');
+  el.innerHTML = '<div style="color:var(--muted)">Running…</div>';
 
-  setStatus('Loading image…','load');
-  setProgress(10);
-  document.getElementById('loadBtn').disabled=true;
-
-  const img = new Image();
-  img.crossOrigin='anonymous';
-
-  img.onload = async ()=>{
-    srcImg=img;
-    setProgress(30);
-    setStatus('Image loaded — extracting angles…','load');
-
-    // Show thumb
-    const tb=document.getElementById('thumbBox');
-    tb.innerHTML='';
-    const ti=document.createElement('img');
-    ti.src=url; ti.style.maxWidth='100%'; ti.style.maxHeight='100px'; ti.style.objectFit='contain';
-    ti.crossOrigin='anonymous';
-    tb.appendChild(ti);
-
-    await buildAllFrames();
-    buildTurnaroundGrid();
-    buildSpriteSheet();
-    renderSheet();
-    updateStats();
-
-    isReady=true;
-    document.getElementById('exportSheetBtn').disabled=false;
-    document.getElementById('exportTurnaround').disabled=false;
-    document.getElementById('loadBtn').disabled=false;
-    restartAnim();
-    setStatus('Ready — '+ANGLES+' angles, 36 total frames','ok');
-    setProgress(100);
+  const headers = {
+    'client-id': CLIENT_ID(),
+    'authorization': `Bearer ${ACCESS_TOKEN()}`,
+    'content-type': 'application/json',
+    'accept': 'application/json'
   };
 
-  img.onerror=()=>{
-    setStatus('Failed to load image — check URL/CORS','err');
-    document.getElementById('loadBtn').disabled=false;
-    setProgress(0);
-  };
+  let url = BASE + cfg.path;
+  let options = { method: cfg.method, headers };
 
-  img.src=url+'?t='+Date.now();
-}
-
-function extractAngle(angleIdx){
-  const c=document.createElement('canvas'); c.width=CELL; c.height=CELL;
-  const ctx=c.getContext('2d');
-  ctx.imageSmoothingEnabled=true;
-  ctx.imageSmoothingQuality='high';
-  const m=SRC_MAP[angleIdx];
-
-  if(!srcImg){return c;}
-
-  const sw=srcImg.naturalWidth/SRC_COLS;
-  const sh=srcImg.naturalHeight/SRC_ROWS;
-  const sx=m.c*sw, sy=m.r*sh;
-
-  // Fit the (possibly non-square) source cell into the square CELL canvas
-  // while preserving its aspect ratio, instead of stretching it to fill —
-  // this is what was causing the squashed/cropped-looking characters.
-  const fitScale=Math.min(CELL/sw, CELL/sh)*charScale;
-  const dw=sw*fitScale, dh=sh*fitScale;
-  const dx=(CELL-dw)/2, dy=(CELL-dh)/2;
-
-  ctx.save();
-  if(m.flip){
-    ctx.translate(CELL,0); ctx.scale(-1,1);
-    ctx.drawImage(srcImg,sx,sy,sw,sh, CELL-dx-dw, dy, dw, dh);
-  } else {
-    ctx.drawImage(srcImg,sx,sy,sw,sh, dx, dy, dw, dh);
+  // build query params
+  const qp = cfg.queryParams ? cfg.queryParams(getField) : null;
+  if (qp) {
+    const q = new URLSearchParams();
+    Object.entries(qp).forEach(([k,v]) => { if (v) q.append(k, v); });
+    const qs = q.toString();
+    if (qs) url += '?' + qs;
   }
-  ctx.restore();
-  return c;
-}
 
-function buildWalkFrame(angleIdx, frameNum, totalFrames){
-  const c=document.createElement('canvas'); c.width=CELL; c.height=CELL;
-  const ctx=c.getContext('2d');
+  // build body
+  if (cfg.method !== 'GET' && cfg.body) {
+    options.body = JSON.stringify(cfg.body(getField));
+  }
 
-  const t=frameNum/totalFrames;
-  const cycle=Math.PI*2*t;
-
-  // Base character
-  const base=extractAngle(angleIdx);
-
-  // Walk offset: body bob + leg swing
-  const bobY=Math.abs(Math.sin(cycle))*6;
-  const swayX=Math.sin(cycle)*3;
-  const tiltAngle=Math.sin(cycle)*0.025;
-
-  ctx.save();
-  ctx.translate(CELL/2+swayX, CELL/2+bobY);
-  ctx.rotate(tiltAngle);
-  ctx.translate(-CELL/2,-CELL/2);
-  ctx.drawImage(base,0,0);
-  ctx.restore();
-
-  // Arm swing overlays (drawn as bezier arcs to simulate arm motion)
-  drawArmSwing(ctx, angleIdx, t);
-  drawLegSwing(ctx, angleIdx, t);
-
-  return c;
-}
-
-function drawArmSwing(ctx, angleIdx, t){
-  const cycle=Math.PI*2*t;
-  const isProfile=(angleIdx===2||angleIdx===6);
-  const isFront=(angleIdx===0);
-  const isBack=(angleIdx===4);
-
-  if(!isProfile && !isFront && !isBack) return;
-
-  ctx.save();
-  ctx.globalAlpha=0.0; // Arms are part of sprite, skip overdraw
-  ctx.restore();
-}
-
-function drawLegSwing(ctx, angleIdx, t){ }
-
-function buildIdleFrame(angleIdx, frameNum, totalFrames){
-  const c=document.createElement('canvas'); c.width=CELL; c.height=CELL;
-  const ctx=c.getContext('2d');
-
-  const t=frameNum/totalFrames;
-  const cycle=Math.PI*2*t;
-
-  const base=extractAngle(angleIdx);
-
-  // Idle: gentle breathe bob + slight head turn hint
-  const breathe=Math.sin(cycle)*3;
-  const sway=Math.sin(cycle*0.5)*1.5;
-
-  ctx.save();
-  ctx.translate(CELL/2+sway, CELL/2);
-  ctx.scale(1, 1+breathe*0.003);
-  ctx.translate(-CELL/2,-CELL/2);
-  ctx.drawImage(base,0,0);
-  ctx.restore();
-
-  // Breathing chest highlight
-  ctx.save();
-  const cx=CELL*0.5, cy=CELL*0.42;
-  const r=CELL*0.07*(1+breathe*0.008);
-  const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
-  grad.addColorStop(0,'rgba(255,255,240,'+(.04+breathe*.008)+')');
-  grad.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=grad;
-  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
-  ctx.restore();
-
-  return c;
-}
-
-async function buildAllFrames(){
-  walkFrames=[];
-  idleFrames=[];
-  const WALK=24, IDLE=12;
-
-  for(let a=0;a<ANGLES;a++){
-    walkFrames[a]=[];
-    idleFrames[a]=[];
-    for(let f=0;f<WALK;f++) walkFrames[a].push(buildWalkFrame(a,f,WALK));
-    for(let f=0;f<IDLE;f++) idleFrames[a].push(buildIdleFrame(a,f,IDLE));
-    setProgress(30+Math.round((a+1)/ANGLES*40));
-    await tick();
+  const t0 = Date.now();
+  try {
+    const res = await fetch(url, options);
+    const ms = Date.now() - t0;
+    let data;
+    try { data = await res.json(); } catch { data = { raw: await res.text() }; }
+    showResponse(el, res.status, ms, data);
+  } catch(e) {
+    el.innerHTML = renderResponse(null, 0, { error: e.message });
   }
 }
 
-function tick(){ return new Promise(r=>setTimeout(r,0)); }
-
-function buildTurnaroundGrid(){
-  const grid=document.getElementById('turnaroundGrid');
-  grid.innerHTML='';
-  for(let a=0;a<ANGLES;a++){
-    const cell=document.createElement('div');
-    cell.className='angle-cell';
-    const cv=document.createElement('canvas');
-    cv.width=CELL; cv.height=CELL;
-    cv.style.width='80px'; cv.style.height='80px';
-    cv.style.imageRendering='auto';
-    cv.style.borderRadius='4px';
-    const ctx=cv.getContext('2d');
-    ctx.imageSmoothingEnabled=true;
-    ctx.imageSmoothingQuality='high';
-    ctx.drawImage(walkFrames[a][0],0,0);
-    const label=document.createElement('span');
-    label.textContent=ANGLE_NAMES[a];
-    cell.appendChild(cv);
-    cell.appendChild(label);
-    grid.appendChild(cell);
-  }
+function showResponse(el, status, ms, data) {
+  const json = JSON.stringify(data, null, 2);
+  lastResponse = json;
+  const cls = status >= 200 && status < 300 ? 'status-2xx' : 'status-4xx';
+  el.innerHTML = `
+    <div class="response-meta">
+      <span class="status-badge ${cls}">${status}</span>
+      <span class="response-time">${ms}ms</span>
+    </div>
+    <pre>${escapeHtml(json)}</pre>`;
 }
 
-function buildSpriteSheet(){
-  const WALK=24, IDLE=12;
-  const TOTAL_ROWS=ANGLES*2;
-  const MAX_COLS=WALK;
-  const sc=document.getElementById('sheetCanvas');
-  sc.width=MAX_COLS*CELL;
-  sc.height=TOTAL_ROWS*CELL;
-  const ctx=sc.getContext('2d');
-  ctx.imageSmoothingEnabled=true;
-  ctx.imageSmoothingQuality='high';
+function renderResponse(el, status, data) {
+  return `<div class="response-meta"><span class="status-badge status-err">Error</span></div><pre>${escapeHtml(JSON.stringify(data,null,2))}</pre>`;
+}
 
-  ctx.fillStyle='rgba(0,0,0,0)';
-  ctx.clearRect(0,0,sc.width,sc.height);
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function copyResponse() { navigator.clipboard.writeText(lastResponse); }
 
-  for(let a=0;a<ANGLES;a++){
-    // Walk row
-    for(let f=0;f<WALK;f++){
-      ctx.drawImage(walkFrames[a][f], f*CELL, a*2*CELL);
+// ── App Token ──
+async function getAppToken() {
+  const el = document.getElementById('app-token-response');
+  el.innerHTML = '<div style="color:var(--muted)">Requesting…</div>';
+  const t0 = Date.now();
+  try {
+    const res = await fetch(`${AUTH_BASE}/token`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'accept': 'application/json' },
+      body: JSON.stringify({ clientId: CLIENT_ID(), clientSecret: CLIENT_SECRET(), grantType: 'client_credentials' })
+    });
+    const ms = Date.now() - t0;
+    const data = await res.json();
+    const json = JSON.stringify(data, null, 2);
+    lastResponse = json;
+    const cls = res.ok ? 'status-2xx' : 'status-4xx';
+    el.innerHTML = `
+      <div class="response-meta">
+        <span class="status-badge ${cls}">${res.status}</span>
+        <span class="response-time">${ms}ms</span>
+        ${data.accessToken ? '<span style="color:var(--green);font-size:11px;">✓ Token auto-filled above</span>' : ''}
+      </div>
+      <pre>${escapeHtml(json)}</pre>`;
+    if (data.accessToken) {
+      document.getElementById('accessToken').value = data.accessToken;
+      updateTokenStatus();
     }
-    // Idle row (12 frames, rest empty)
-    for(let f=0;f<IDLE;f++){
-      ctx.drawImage(idleFrames[a][f], f*CELL, (a*2+1)*CELL);
+  } catch(e) {
+    el.innerHTML = `<pre style="color:var(--red)">${e.message}</pre>`;
+  }
+}
+
+// ── OAuth Flow ──
+async function generateAuthUrl() {
+  const el = document.getElementById('auth-url-result');
+  const redirectUri = document.getElementById('oauth-redirect').value.trim();
+  const scopesRaw = document.getElementById('oauth-scopes').value.trim();
+  const scopes = scopesRaw.split(',').map(s => s.trim()).filter(Boolean);
+  el.innerHTML = '<div style="color:var(--muted)">Generating…</div>';
+  try {
+    const res = await fetch('https://blaze.stream/bapi/oauth2/generate-auth-url', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ clientId: CLIENT_ID(), clientSecret: CLIENT_SECRET(), redirectUri, scopes })
+    });
+    const data = await res.json();
+    if (data.url) {
+      pkceState = data.state;
+      pkceVerifier = data.codeVerifier;
+      el.innerHTML = `
+        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:12px;margin-top:8px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Authorization URL (open in browser)</div>
+          <a href="${data.url}" target="_blank" style="color:var(--blaze);word-break:break-all;font-size:12px;">${data.url}</a>
+          <div style="margin-top:8px;font-size:11px;color:var(--muted);">State: <span class="tag">${data.state}</span> saved for validation</div>
+        </div>`;
+    } else {
+      el.innerHTML = `<pre style="color:var(--red)">${escapeHtml(JSON.stringify(data,null,2))}</pre>`;
     }
-    // Row labels
-    ctx.save();
-    ctx.fillStyle='rgba(255,255,255,0.5)';
-    ctx.font='bold 20px monospace';
-    ctx.fillText(ANGLE_NAMES[a]+' — Walk', 8, a*2*CELL+28);
-    ctx.fillText(ANGLE_NAMES[a]+' — Idle', 8, (a*2+1)*CELL+28);
-    ctx.restore();
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--red)">${e.message}</div>`;
   }
-
-  // Grid overlay
-  ctx.save();
-  ctx.strokeStyle='rgba(124,92,191,0.2)';
-  ctx.lineWidth=1;
-  for(let x=0;x<=MAX_COLS;x++){
-    ctx.beginPath(); ctx.moveTo(x*CELL,0); ctx.lineTo(x*CELL,sc.height); ctx.stroke();
-  }
-  for(let y=0;y<=TOTAL_ROWS;y++){
-    ctx.beginPath(); ctx.moveTo(0,y*CELL); ctx.lineTo(sc.width,y*CELL); ctx.stroke();
-  }
-  ctx.restore();
 }
 
-function renderSheet(){
-  const sc=document.getElementById('sheetCanvas');
-  const wrapper=document.querySelector('.sheet-scroll');
-  sc.style.maxWidth='none';
-  sc.style.width=(sc.width/4)+'px';
-  sc.style.height=(sc.height/4)+'px';
-}
-
-function updateStats(){
-  const WALK=24, IDLE=12;
-  document.getElementById('statAngles').textContent=ANGLES;
-  document.getElementById('statFrames').textContent=(WALK+IDLE)*ANGLES;
-  document.getElementById('statSize').textContent=CELL+'px';
-  const sc=document.getElementById('sheetCanvas');
-  document.getElementById('statSheet').textContent=Math.round(sc.width/1024)+'K×'+Math.round(sc.height/1024)+'K';
-}
-
-function restartAnim(){
-  if(animTimer) clearInterval(animTimer);
-  frameIndex=0;
-  animTimer=setInterval(()=>{
-    const frames=currentAnim==='walk'?walkFrames:idleFrames;
-    if(!frames.length||!frames[currentAngle]) return;
-    const total=frames[currentAngle].length;
-    frameIndex=(frameIndex+1)%total;
-    const cv=document.getElementById('previewCanvas');
-    const ctx=cv.getContext('2d');
-    ctx.imageSmoothingEnabled=true;
-    ctx.imageSmoothingQuality='high';
-    ctx.clearRect(0,0,cv.width,cv.height);
-
-    // Checkerboard bg
-    const ts=16;
-    for(let x=0;x<cv.width;x+=ts)
-      for(let y=0;y<cv.height;y+=ts){
-        ctx.fillStyle=((x/ts+y/ts)%2)?'#1a1a26':'#141420';
-        ctx.fillRect(x,y,ts,ts);
-      }
-
-    ctx.drawImage(frames[currentAngle][frameIndex],0,0,cv.width,cv.height);
-    document.getElementById('frameCounter').textContent=`Frame ${frameIndex+1}/${total} — ${ANGLE_NAMES[currentAngle]}`;
-  }, 1000/fps);
-}
-
-function exportSpriteSheet(){
-  if(!isReady) return;
-  const sc=document.getElementById('sheetCanvas');
-  const link=document.createElement('a');
-  link.download='spritesheet_1024x1024_cells.png';
-  link.href=sc.toDataURL('image/png');
-  link.click();
-  setStatus('Sprite sheet exported!','ok');
-}
-
-function exportTurnaround(){
-  if(!isReady) return;
-  const c=document.createElement('canvas');
-  c.width=CELL*ANGLES; c.height=CELL;
-  const ctx=c.getContext('2d');
-  for(let a=0;a<ANGLES;a++){
-    ctx.drawImage(walkFrames[a][0], a*CELL, 0);
-    ctx.fillStyle='rgba(255,255,255,0.4)';
-    ctx.font='bold 18px monospace';
-    ctx.fillText(ANGLE_NAMES[a], a*CELL+8, 24);
-  }
-  // Dividers
-  ctx.strokeStyle='rgba(124,92,191,0.4)';
-  for(let a=1;a<ANGLES;a++){ctx.beginPath();ctx.moveTo(a*CELL,0);ctx.lineTo(a*CELL,CELL);ctx.stroke();}
-  const link=document.createElement('a');
-  link.download='character_turnaround_8angles.png';
-  link.href=c.toDataURL('image/png');
-  link.click();
-  setStatus('Turnaround sheet exported!','ok');
-}
-
-// Init preview loop even before load
-(function initPreview(){
-  const cv=document.getElementById('previewCanvas');
-  const ctx=cv.getContext('2d');
-  const ts=16;
-  for(let x=0;x<cv.width;x+=ts)
-    for(let y=0;y<cv.height;y+=ts){
-      ctx.fillStyle=((x/ts+y/ts)%2)?'#1a1a26':'#141420';
-      ctx.fillRect(x,y,ts,ts);
+async function exchangeCode() {
+  const el = document.getElementById('exchange-result');
+  const code = document.getElementById('oauth-code').value.trim();
+  const redirectUri = document.getElementById('oauth-redirect').value.trim();
+  if (!code) { el.innerHTML = '<div style="color:var(--red)">Paste the authorization code first</div>'; return; }
+  el.innerHTML = '<div style="color:var(--muted)">Exchanging…</div>';
+  try {
+    const res = await fetch(`${AUTH_BASE}/token`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        clientId: CLIENT_ID(), clientSecret: CLIENT_SECRET(),
+        code, codeVerifier: pkceVerifier || '', redirectUri, grantType: 'authorization_code'
+      })
+    });
+    const data = await res.json();
+    if (data.accessToken) {
+      document.getElementById('accessToken').value = data.accessToken;
+      updateTokenStatus();
+      if (data.refreshToken) document.getElementById('refresh-token-input').value = data.refreshToken;
     }
-  ctx.fillStyle='rgba(255,255,255,0.15)';
-  ctx.font='14px system-ui';
-  ctx.textAlign='center';
-  ctx.fillText('Load a character to begin',cv.width/2,cv.height/2-10);
-  ctx.fillText('↑ Click "Load Character"',cv.width/2,cv.height/2+14);
-})();
+    el.innerHTML = `<pre>${escapeHtml(JSON.stringify(data,null,2))}</pre>`;
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--red)">${e.message}</div>`;
+  }
+}
+
+async function refreshToken() {
+  const el = document.getElementById('refresh-result');
+  const rt = document.getElementById('refresh-token-input').value.trim();
+  if (!rt) { el.innerHTML = '<div style="color:var(--red)">Paste a refresh token first</div>'; return; }
+  el.innerHTML = '<div style="color:var(--muted)">Refreshing…</div>';
+  try {
+    const res = await fetch(`${AUTH_BASE}/refresh`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ clientId: CLIENT_ID(), clientSecret: CLIENT_SECRET(), refreshToken: rt })
+    });
+    const data = await res.json();
+    if (data.accessToken) {
+      document.getElementById('accessToken').value = data.accessToken;
+      updateTokenStatus();
+    }
+    el.innerHTML = `<pre>${escapeHtml(JSON.stringify(data,null,2))}</pre>`;
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--red)">${e.message}</div>`;
+  }
+}
+
+// ── Endpoint Configs ──
+const ENDPOINTS = {
+  'list-channels': {
+    title: 'List Channels',
+    desc: 'Returns channels with cursor pagination. Filter by slug, category, or live status.',
+    method: 'GET', path: '/channels',
+    fields: [
+      { key: 'slug', label: 'Slug (optional)', placeholder: 'lasvegasape' },
+      { key: 'categoryId', label: 'Category ID (optional)', placeholder: '36018' },
+      { key: 'type', label: 'Type', type: 'select', options: [{v:'',l:'All'},{v:'live',l:'Live Only'},{v:'all',l:'Live + Offline'}] },
+      { key: 'limit', label: 'Limit', default: '20' }
+    ],
+    queryParams: g => ({ 'slug[]': g('slug'), 'categoryId[]': g('categoryId'), type: g('type'), limit: g('limit') })
+  },
+  'channel-stats': {
+    title: 'Channel Stats',
+    desc: 'Returns follower, subscriber, and viewer counts.',
+    method: 'GET', path: '/channels/stats',
+    fields: [{ key: 'channelId', label: 'Channel ID (App Token only, optional)', placeholder: 'UUID' }],
+    queryParams: g => ({ channelId: g('channelId') })
+  },
+  'live-stats': {
+    title: 'Live Stats',
+    desc: 'Returns live session counters: viewers, new followers, new subs.',
+    method: 'GET', path: '/channels/live-stats',
+    fields: [{ key: 'channelId', label: 'Channel ID (App Token only, optional)', placeholder: 'UUID' }],
+    queryParams: g => ({ channelId: g('channelId') })
+  },
+  'channel-followers': {
+    title: 'List Followers',
+    desc: 'Cursor-paginated followers for the authorized channel. Requires User Access Token.',
+    method: 'GET', path: '/channels/followers',
+    fields: [{ key: 'limit', label: 'Limit', default: '20' }, { key: 'cursor', label: 'Cursor', placeholder: 'pagination cursor' }],
+    queryParams: g => ({ limit: g('limit'), cursor: g('cursor') })
+  },
+  'followed-channels': {
+    title: 'Followed Channels',
+    desc: 'Returns channels the authorized user follows.',
+    method: 'GET', path: '/channels/followed',
+    fields: [{ key: 'limit', label: 'Limit', default: '20' }],
+    queryParams: g => ({ limit: g('limit') })
+  },
+  'subscribers': {
+    title: 'List Subscribers',
+    desc: 'Active subscribers for the authorized channel.',
+    method: 'GET', path: '/channels/subscribers',
+    fields: [{ key: 'limit', label: 'Limit', default: '20' }],
+    queryParams: g => ({ limit: g('limit') })
+  },
+  'activities': {
+    title: 'Recent Activities',
+    desc: 'Activity feed: followers, subs, gifts, thanks, votes.',
+    method: 'GET', path: '/channels/activities',
+    fields: [
+      { key: 'limit', label: 'Limit', default: '20' },
+      { key: 'type', label: 'Filter Type', placeholder: 'follow / subscribe / gift…' }
+    ],
+    queryParams: g => ({ limit: g('limit'), type: g('type') })
+  },
+  'clips': {
+    title: 'Channel Clips',
+    desc: 'Paginated clips for a target channel.',
+    method: 'GET', path: '/channels/clips',
+    fields: [
+      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
+      { key: 'limit', label: 'Limit', default: '20' },
+      { key: 'orderBy', label: 'Order By', type: 'select', options: [{v:'most_viewed',l:'Most Viewed'},{v:'most_recent',l:'Most Recent'}] }
+    ],
+    queryParams: g => ({ channelId: g('channelId'), limit: g('limit'), orderBy: g('orderBy') })
+  },
+  'vods': {
+    title: 'Channel VODs',
+    desc: 'Paginated VODs for a target channel.',
+    method: 'GET', path: '/channels/vods',
+    fields: [
+      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
+      { key: 'limit', label: 'Limit', default: '20' },
+      { key: 'orderBy', label: 'Order By', type: 'select', options: [{v:'most_recent',l:'Most Recent'},{v:'most_viewed',l:'Most Viewed'}] }
+    ],
+    queryParams: g => ({ channelId: g('channelId'), limit: g('limit'), orderBy: g('orderBy') })
+  },
+  'vips': {
+    title: 'List VIP Users',
+    desc: 'Returns VIP role users for the authorized channel.',
+    method: 'GET', path: '/channels/roles/vips',
+    fields: [{ key: 'channelId', label: 'Channel ID (App Token)', placeholder: 'UUID' }],
+    queryParams: g => ({ channelId: g('channelId') })
+  },
+  'mods': {
+    title: 'List Mod Users',
+    desc: 'Returns moderator role users for the authorized channel.',
+    method: 'GET', path: '/channels/roles/mods',
+    fields: [{ key: 'channelId', label: 'Channel ID (App Token)', placeholder: 'UUID' }],
+    queryParams: g => ({ channelId: g('channelId') })
+  },
+  'ogs': {
+    title: 'List OG Users',
+    desc: 'Returns OG role users for the authorized channel.',
+    method: 'GET', path: '/channels/roles/ogs',
+    fields: [{ key: 'channelId', label: 'Channel ID (App Token)', placeholder: 'UUID' }],
+    queryParams: g => ({ channelId: g('channelId') })
+  },
+  'banned-users': {
+    title: 'List Banned Users',
+    desc: 'Returns banned users and the mod that applied each ban.',
+    method: 'GET', path: '/channels/banned-users',
+    fields: [{ key: 'limit', label: 'Limit', default: '20' }],
+    queryParams: g => ({ limit: g('limit') })
+  },
+  'update-channel': {
+    title: 'Update Channel Info',
+    desc: 'Update channel title, language, and optional category. Requires User Access Token + channel.moderate scope.',
+    method: 'POST', path: '/channels/info',
+    fields: [
+      { key: 'title', label: 'Title', required: true, placeholder: 'Stream title' },
+      { key: 'lang', label: 'Language', default: 'en', placeholder: 'en' },
+      { key: 'categoryId', label: 'Category ID (optional)', placeholder: '12' }
+    ],
+    body: g => ({ title: g('title'), lang: g('lang'), ...(g('categoryId') && { categoryId: parseInt(g('categoryId')) }) })
+  },
+  'add-vip': {
+    title: 'Add VIP User',
+    desc: 'Add a user to the VIP role. channelId must match your token user UUID.',
+    method: 'POST', path: '/channels/vips',
+    fields: [
+      { key: 'channelId', label: 'Channel ID (your UUID)', required: true, placeholder: 'UUID' },
+      { key: 'userId', label: 'User ID to add', required: true, placeholder: 'UUID' }
+    ],
+    body: g => ({ channelId: g('channelId'), userId: g('userId') })
+  },
+  'remove-vip': {
+    title: 'Remove VIP User',
+    desc: 'Remove a user from the VIP role.',
+    method: 'DELETE', path: '/channels/vips',
+    fields: [
+      { key: 'channelId', label: 'Channel ID (your UUID)', required: true, placeholder: 'UUID' },
+      { key: 'userId', label: 'User ID to remove', required: true, placeholder: 'UUID' }
+    ],
+    body: g => ({ channelId: g('channelId'), userId: g('userId') })
+  },
+  'add-og': {
+    title: 'Add OG User',
+    desc: 'Add a user to the OG role.',
+    method: 'POST', path: '/channels/ogs',
+    fields: [
+      { key: 'channelId', label: 'Channel ID (your UUID)', required: true, placeholder: 'UUID' },
+      { key: 'userId', label: 'User ID to add', required: true, placeholder: 'UUID' }
+    ],
+    body: g => ({ channelId: g('channelId'), userId: g('userId') })
+  },
+  'remove-og': {
+    title: 'Remove OG User',
+    desc: 'Remove a user from the OG role.',
+    method: 'DELETE', path: '/channels/ogs',
+    fields: [
+      { key: 'channelId', label: 'Channel ID (your UUID)', required: true, placeholder: 'UUID' },
+      { key: 'userId', label: 'User ID to remove', required: true, placeholder: 'UUID' }
+    ],
+    body: g => ({ channelId: g('channelId'), userId: g('userId') })
+  },
+  'user-profile': {
+    title: 'Get User Profile',
+    desc: 'Returns profile data for the authorized user (or a target via userId/username with App Token).',
+    method: 'GET', path: '/users/profile',
+    fields: [
+      { key: 'userId', label: 'User ID (App Token, optional)', placeholder: 'UUID' },
+      { key: 'username', label: 'Username (App Token, optional)', placeholder: 'creator' }
+    ],
+    queryParams: g => ({ userId: g('userId'), username: g('username') })
+  },
+  'achievement-stats': {
+    title: 'Achievement Stats',
+    desc: 'Creator tier, follower count, stream hours, and unique chatters.',
+    method: 'GET', path: '/users/achievement-stats',
+    fields: [{ key: 'userId', label: 'User ID (App Token, optional)', placeholder: 'UUID' }],
+    queryParams: g => ({ userId: g('userId') })
+  },
+  'user-subscriptions': {
+    title: 'User Subscriptions',
+    desc: 'Active, gifted, and expired subscriptions for the authorized user.',
+    method: 'GET', path: '/users/subscriptions',
+    fields: []
+  },
+  'update-bio': {
+    title: 'Update Bio',
+    desc: 'Update the authorized user\'s public bio (max 300 chars). Requires channel.moderate scope.',
+    method: 'POST', path: '/users/profile/bio',
+    fields: [{ key: 'bio', label: 'Bio', required: true, placeholder: 'Your bio here…' }],
+    body: g => ({ bio: g('bio') })
+  },
+  'chat-messages': {
+    title: 'Get Chat Messages',
+    desc: 'Fetch recent chat messages for a channel.',
+    method: 'GET', path: '/chats/messages',
+    fields: [
+      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
+      { key: 'limit', label: 'Limit', default: '20' }
+    ],
+    queryParams: g => ({ channelId: g('channelId'), limit: g('limit') })
+  },
+  'send-chat': {
+    title: 'Send Chat Message',
+    desc: 'Send a message to a channel chat. Requires User Access Token.',
+    method: 'POST', path: '/chats/messages',
+    fields: [
+      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
+      { key: 'message', label: 'Message', required: true, placeholder: 'Hello chat!' }
+    ],
+    body: g => ({ channelId: g('channelId'), message: g('message') })
+  },
+  'list-categories': {
+    title: 'List Categories',
+    desc: 'Paginated stream category catalog with slugs and images.',
+    method: 'GET', path: '/categories',
+    fields: [
+      { key: 'term', label: 'Search Term', placeholder: 'just chatting' },
+      { key: 'limit', label: 'Limit (max 200)', default: '20' }
+    ],
+    queryParams: g => ({ term: g('term'), limit: g('limit') })
+  },
+  'ban-user': {
+    title: 'Ban User',
+    desc: 'Permanently ban a user from your channel. Requires channel.moderate scope.',
+    method: 'POST', path: '/moderation/bans',
+    fields: [
+      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
+      { key: 'userId', label: 'User ID to ban', required: true, placeholder: 'UUID' }
+    ],
+    body: g => ({ channelId: g('channelId'), userId: g('userId') })
+  },
+  'unban-user': {
+    title: 'Unban User',
+    desc: 'Remove a ban from a user in your channel.',
+    method: 'DELETE', path: '/moderation/bans',
+    fields: [
+      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
+      { key: 'userId', label: 'User ID to unban', required: true, placeholder: 'UUID' }
+    ],
+    body: g => ({ channelId: g('channelId'), userId: g('userId') })
+  },
+  'mute-user': {
+    title: 'Mute User',
+    desc: 'Temporarily mute a user in your channel. Requires channel.moderate scope.',
+    method: 'POST', path: '/moderation/mutes',
+    fields: [
+      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
+      { key: 'userId', label: 'User ID to mute', required: true, placeholder: 'UUID' },
+      { key: 'duration', label: 'Duration (seconds)', placeholder: '300', default: '300' }
+    ],
+    body: g => ({ channelId: g('channelId'), userId: g('userId'), duration: parseInt(g('duration')) || 300 })
+  }
+};
 </script>
 </body>
-</html>u
+</html>
