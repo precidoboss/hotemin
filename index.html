@@ -268,6 +268,15 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
         <div class="cmd-item"><code>!hug @user</code><div class="cdesc">Warm shoutout + score</div></div>
         <div class="cmd-item"><code>!uptime</code><div class="cdesc">Bot uptime</div></div>
       </div>
+      <div class="section-label" style="margin-top:16px;margin-bottom:8px;">🎮 Mini-Games</div>
+      <div class="cmd-list">
+        <div class="cmd-item"><code>!trivia</code><div class="cdesc">Starts a trivia question, first correct answer in chat wins pts</div></div>
+        <div class="cmd-item"><code>!scramble</code><div class="cdesc">Unscramble the word, first to type it right wins</div></div>
+        <div class="cmd-item"><code>!guess</code><div class="cdesc">Bot picks 1-100, guess the number in chat</div></div>
+        <div class="cmd-item"><code>!rps rock|paper|scissors</code><div class="cdesc">Quick round vs the bot</div></div>
+        <div class="cmd-item"><code>!stopgame</code><div class="cdesc">Ends the active mini-game early</div></div>
+        <div class="cmd-item"><code>!games</code><div class="cdesc">Lists all mini-games</div></div>
+      </div>
     </div>
   </div>
 
@@ -365,7 +374,7 @@ let loyalty = {}; // userId -> { username, displayName, avatarUrl, score, msgs, 
 let alertsCleared = false;
 
 // ── SCORING ──
-const SCORES = { msg:1, follow:10, sub:50, gift:30, vote:5 };
+const SCORES = { msg:1, follow:10, sub:50, gift:30, vote:5, game:20 };
 const MILESTONES = [
   { pts:10, name:'Lurker', icon:'👀' },
   { pts:100, name:'Regular', icon:'💬' },
@@ -374,6 +383,111 @@ const MILESTONES = [
   { pts:1000, name:'Diamond', icon:'💎' },
   { pts:2000, name:'Legend', icon:'👑' }
 ];
+
+// ── MINI-GAMES ──
+let game = null; // { type, answer, displayAnswer, startedAt, timeoutId, extra }
+const GAME_TIMEOUT_MS = 45000;
+
+const TRIVIA_QUESTIONS = [
+  { q:'What does HODL originally stand for (typo of)?', a:'hold' },
+  { q:'What blockchain is famous for the term "gas fees"?', a:'ethereum' },
+  { q:'What 3-letter ticker is Bitcoin\'s?', a:'btc' },
+  { q:'What do you call a crypto wallet not connected to the internet?', a:'cold wallet' },
+  { q:'What does NFT stand for?', a:'non fungible token' },
+  { q:'What number is considered universally unlucky?', a:'13' },
+  { q:'What planet is known as the Red Planet?', a:'mars' },
+  { q:'How many sides does a hexagon have?', a:'6' },
+  { q:'What\'s the largest ocean on Earth?', a:'pacific' },
+  { q:'What gas do plants absorb from the air?', a:'carbon dioxide' }
+];
+
+const SCRAMBLE_WORDS = ['stream','loyalty','devoted','channel','trivia','rocket','dragon','wizard','phoenix','legend','grotto','viewer','follow','subscribe','chatbot'];
+
+function scrambleWord(word){
+  let arr = word.split('');
+  let s;
+  do { for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];} s=arr.join(''); } while(s===word && word.length>1);
+  return s;
+}
+
+function clearGameTimer(){ if(game && game.timeoutId){ clearTimeout(game.timeoutId); game.timeoutId=null; } }
+
+function endGame(reason){
+  if(!game) return;
+  clearGameTimer();
+  const g = game; game = null;
+  if(reason==='timeout') sendChat(`⏰ Time's up! The answer was "${g.displayAnswer||g.answer}". No one got it — try !${g.type} again!`);
+}
+
+function startTrivia(){
+  if(game){ sendChat(`A ${game.type} round is already running!`); return; }
+  const pick = TRIVIA_QUESTIONS[Math.floor(Math.random()*TRIVIA_QUESTIONS.length)];
+  game = { type:'trivia', answer:pick.a.toLowerCase(), displayAnswer:pick.a, startedAt:Date.now() };
+  game.timeoutId = setTimeout(()=>endGame('timeout'), GAME_TIMEOUT_MS);
+  sendChat(`🧠 TRIVIA TIME! ${pick.q} — first correct answer in chat wins +${SCORES.game} pts! (45s)`);
+}
+
+function startScramble(){
+  if(game){ sendChat(`A ${game.type} round is already running!`); return; }
+  const word = SCRAMBLE_WORDS[Math.floor(Math.random()*SCRAMBLE_WORDS.length)];
+  const scrambled = scrambleWord(word);
+  game = { type:'scramble', answer:word.toLowerCase(), displayAnswer:word, startedAt:Date.now() };
+  game.timeoutId = setTimeout(()=>endGame('timeout'), GAME_TIMEOUT_MS);
+  sendChat(`🔤 WORD SCRAMBLE! Unscramble: "${scrambled.toUpperCase()}" — type the word in chat to win +${SCORES.game} pts! (45s)`);
+}
+
+function startGuess(){
+  if(game){ sendChat(`A ${game.type} round is already running!`); return; }
+  const num = Math.floor(Math.random()*100)+1;
+  game = { type:'guess', answer:String(num), displayAnswer:String(num), startedAt:Date.now() };
+  game.timeoutId = setTimeout(()=>endGame('timeout'), GAME_TIMEOUT_MS);
+  sendChat(`🔢 GUESS THE NUMBER! I'm thinking of a number 1-100 — type your guess in chat! Closest exact match wins +${SCORES.game} pts! (45s)`);
+}
+
+function playRPS(sender, choice){
+  const valid = ['rock','paper','scissors'];
+  choice = (choice||'').toLowerCase();
+  if(!valid.includes(choice)){ sendChat('Usage: !rps rock|paper|scissors'); return; }
+  const botChoice = valid[Math.floor(Math.random()*3)];
+  let result;
+  if(choice===botChoice) result='tie';
+  else if((choice==='rock'&&botChoice==='scissors')||(choice==='paper'&&botChoice==='rock')||(choice==='scissors'&&botChoice==='paper')) result='win';
+  else result='lose';
+  const emoji = { rock:'🪨', paper:'📄', scissors:'✂️' };
+  if(result==='win'){
+    addScore(sender.id, sender.username, sender.displayName, sender.avatarUrl, 'game', 1);
+    sendChat(`${emoji[choice]} vs ${emoji[botChoice]} — @${sender.username} WINS! +${SCORES.game} pts ⚡`);
+  } else if(result==='tie'){
+    sendChat(`${emoji[choice]} vs ${emoji[botChoice]} — it's a tie! Try again, @${sender.username}`);
+  } else {
+    sendChat(`${emoji[choice]} vs ${emoji[botChoice]} — @${sender.username} loses this round! Better luck next time 😅`);
+  }
+}
+
+// Checks chat messages (non-command) against the active mini-game answer. Returns true if it consumed the message.
+function checkGameAnswer(message, sender){
+  if(!game) return false;
+  const guess = message.trim().toLowerCase();
+  if(!guess) return false;
+  if(game.type==='guess'){
+    const n = parseInt(guess,10);
+    if(isNaN(n)) return false;
+    if(String(n)===game.answer){
+      addScore(sender.id, sender.username, sender.displayName, sender.avatarUrl, 'game', 1);
+      sendChat(`🎯 @${sender.username} guessed it EXACTLY — the number was ${game.answer}! +${SCORES.game} pts ⚡`);
+      clearGameTimer(); game = null;
+      return true;
+    }
+    return false;
+  }
+  if(guess===game.answer){
+    addScore(sender.id, sender.username, sender.displayName, sender.avatarUrl, 'game', 1);
+    sendChat(`✅ @${sender.username} got it — "${game.displayAnswer}"! +${SCORES.game} pts ⚡`);
+    clearGameTimer(); game = null;
+    return true;
+  }
+  return false;
+}
 
 function getMilestone(score) {
   let m = MILESTONES[0];
@@ -588,6 +702,7 @@ function handleEvent(type, payload) {
       addChatMessage(sender, message);
       // Bot commands
       if (message.startsWith('!')) handleBotCommand(message, sender);
+      else checkGameAnswer(message, sender);
       break;
     }
     case 'channel.follow': {
@@ -720,6 +835,20 @@ async function handleBotCommand(message, sender) {
     case '!uptime': {
       const mins = Math.round((Date.now()-connectedAt)/60000);
       sendChat(`⚡ Blaze Companion has been running for ${mins} minute${mins!==1?'s':''}. Tracking ${Object.keys(loyalty).length} members!`);
+      break;
+    }
+    case '!trivia': { startTrivia(); break; }
+    case '!scramble': { startScramble(); break; }
+    case '!guess': { startGuess(); break; }
+    case '!rps': { playRPS(sender, arg); break; }
+    case '!stopgame': {
+      if(!game){ sendChat('No mini-game is running right now.'); return; }
+      const t=game.type; clearGameTimer(); game=null;
+      sendChat(`🛑 ${t} round stopped.`);
+      break;
+    }
+    case '!games': {
+      sendChat('🎮 Mini-games: !trivia · !scramble · !guess · !rps rock|paper|scissors — winners earn pts toward the loyalty leaderboard!');
       break;
     }
   }
