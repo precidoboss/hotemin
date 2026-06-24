@@ -321,6 +321,11 @@ function connectSocket() {
 
 // ── REST API (for the dashboard) ──
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({ name: 'Blaze Companion Bot', status: 'ok', connected, uptime: Math.round((Date.now() - startedAt) / 1000) });
+});
+
 // Health check — UptimeRobot pings this
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', connected, uptime: Math.round((Date.now() - startedAt) / 1000) });
