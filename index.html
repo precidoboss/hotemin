@@ -3,925 +3,885 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blaze API Tester</title>
+<title>Blaze Companion — Stream Loyalty Intelligence</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --blaze: #F0B90B;
-    --blaze-dark: #c99a00;
-    --bg: #0d0d0d;
-    --card: #161616;
-    --border: #2a2a2a;
-    --text: #e0e0e0;
-    --muted: #666;
-    --green: #22c55e;
-    --red: #ef4444;
-    --blue: #3b82f6;
-  }
-  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
-  header { background: var(--card); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
-  header .logo { font-size: 20px; font-weight: 700; color: var(--blaze); }
-  header .subtitle { color: var(--muted); font-size: 12px; }
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#080B10;
+  --surface:#0E1118;
+  --card:#131720;
+  --border:#1E2433;
+  --border2:#252D3D;
+  --blaze:#F0B90B;
+  --blaze2:#FFD234;
+  --blazedim:rgba(240,185,11,0.12);
+  --text:#E8EAF0;
+  --muted:#5A6380;
+  --muted2:#8892AA;
+  --green:#22D47A;
+  --greendim:rgba(34,212,122,0.1);
+  --red:#F05050;
+  --reddim:rgba(240,80,80,0.1);
+  --blue:#4C8EF5;
+  --bluedim:rgba(76,142,245,0.1);
+  --purple:#9B6CF5;
+  --purpledim:rgba(155,108,245,0.1);
+  --gold:#F0B90B;
+  --silver:#9BACC8;
+  --bronze:#C87941;
+}
+html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);font-size:14px;overflow:hidden;}
 
-  .layout { display: grid; grid-template-columns: 260px 1fr; height: calc(100vh - 57px); }
+/* ── LAYOUT ── */
+.shell{display:grid;grid-template-rows:56px 1fr;grid-template-columns:280px 1fr 320px;height:100vh;}
+.topbar{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;padding:0 20px;}
+.sidebar{grid-row:2;grid-column:1;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.main{grid-row:2;grid-column:2;display:flex;flex-direction:column;overflow:hidden;}
+.rightpanel{grid-row:2;grid-column:3;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
 
-  /* SIDEBAR */
-  .sidebar { background: var(--card); border-right: 1px solid var(--border); overflow-y: auto; }
-  .sidebar-section { padding: 8px 0; border-bottom: 1px solid var(--border); }
-  .sidebar-section-title { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--muted); padding: 8px 16px 4px; text-transform: uppercase; }
-  .sidebar-btn { width: 100%; text-align: left; background: none; border: none; color: var(--text); padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; transition: background 0.1s; }
-  .sidebar-btn:hover { background: rgba(240,185,11,0.08); }
-  .sidebar-btn.active { background: rgba(240,185,11,0.15); color: var(--blaze); }
-  .method-badge { font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 3px; letter-spacing: 0.5px; flex-shrink: 0; }
-  .GET  { background: rgba(34,197,94,0.15);  color: var(--green); }
-  .POST { background: rgba(59,130,246,0.15); color: var(--blue); }
-  .DELETE { background: rgba(239,68,68,0.15); color: var(--red); }
+/* ── TOPBAR ── */
+.logo{font-size:18px;font-weight:700;color:var(--blaze);letter-spacing:-0.5px;display:flex;align-items:center;gap:8px;}
+.logo-dot{width:8px;height:8px;background:var(--blaze);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(1.4);}}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.conn-status{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600;letter-spacing:0.5px;}
+.conn-status.connected{background:var(--greendim);color:var(--green);border:1px solid rgba(34,212,122,0.2);}
+.conn-status.disconnected{background:var(--reddim);color:var(--red);border:1px solid rgba(240,80,80,0.2);}
+.conn-status.connecting{background:var(--blazedim);color:var(--blaze);border:1px solid rgba(240,185,11,0.2);}
+.user-pill{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:4px 12px 4px 4px;}
+.user-pill img{width:26px;height:26px;border-radius:50%;object-fit:cover;}
+.user-pill .uname{font-size:13px;font-weight:600;}
+.btn{background:var(--blaze);color:#000;border:none;padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px;font-family:inherit;}
+.btn:hover{background:var(--blaze2);}
+.btn-sm{padding:5px 10px;font-size:11px;}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--muted2);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit;}
+.btn-ghost:hover{border-color:var(--blaze);color:var(--blaze);}
+.btn-red{background:var(--reddim);border:1px solid rgba(240,80,80,0.2);color:var(--red);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;}
+.btn-red:hover{background:rgba(240,80,80,0.2);}
 
-  /* MAIN */
-  .main { display: flex; flex-direction: column; overflow: hidden; }
+/* ── SIDEBAR ── */
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border);}
+.sidebar-header label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;}
+.sidebar-header input{width:100%;background:var(--card);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:8px;font-size:12px;font-family:'JetBrains Mono',monospace;}
+.sidebar-header input:focus{outline:1px solid var(--blaze);}
+.sidebar-connect{padding:12px 16px;border-bottom:1px solid var(--border);}
+.sidebar-section{padding:12px 16px;flex:1;overflow-y:auto;}
+.section-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
 
-  /* AUTH BAR */
-  .auth-bar { background: #111; border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .auth-bar label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
-  .auth-bar input { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 12px; width: 220px; }
-  .auth-bar input:focus { outline: 1px solid var(--blaze); }
-  .btn { background: var(--blaze); color: #000; border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 12px; white-space: nowrap; }
-  .btn:hover { background: var(--blaze-dark); }
-  .btn-outline { background: none; border: 1px solid var(--border); color: var(--text); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; }
-  .btn-outline:hover { border-color: var(--blaze); color: var(--blaze); }
-  .token-status { font-size: 11px; padding: 4px 8px; border-radius: 4px; }
-  .token-status.ok { background: rgba(34,197,94,0.1); color: var(--green); }
-  .token-status.none { background: rgba(239,68,68,0.1); color: var(--red); }
+/* ── STATS GRID ── */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;}
+.stat-card .sv{font-size:22px;font-weight:700;color:var(--text);line-height:1;}
+.stat-card .sl{font-size:10px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
+.stat-card.blaze{border-color:rgba(240,185,11,0.25);background:var(--blazedim);}
+.stat-card.blaze .sv{color:var(--blaze);}
+.stat-card.green{border-color:rgba(34,212,122,0.2);background:var(--greendim);}
+.stat-card.green .sv{color:var(--green);}
 
-  /* PANEL */
-  .panel { flex: 1; display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
-  .endpoint-info { padding: 20px 24px 0; }
-  .endpoint-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-  .endpoint-desc { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
-  .endpoint-url { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-family: monospace; font-size: 13px; color: var(--blaze); display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+/* ── COMMANDS ── */
+.cmd-list{display:flex;flex-direction:column;gap:6px;}
+.cmd-item{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;}
+.cmd-item code{color:var(--blaze);font-family:'JetBrains Mono',monospace;font-size:11px;}
+.cmd-item .cdesc{color:var(--muted2);font-size:11px;margin-top:2px;}
 
-  .content-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; overflow: hidden; }
-  .pane { display: flex; flex-direction: column; overflow: hidden; border-top: 1px solid var(--border); }
-  .pane-header { padding: 10px 24px; background: #111; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); display: flex; align-items: center; justify-content: space-between; }
-  .pane-body { flex: 1; overflow-y: auto; padding: 16px 24px; }
-  .left-pane { border-right: 1px solid var(--border); }
+/* ── MAIN AREA ── */
+.main-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);}
+.tab{padding:12px 18px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--blaze);border-bottom-color:var(--blaze);}
+.main-body{flex:1;overflow-y:auto;padding:20px;}
 
-  /* FORM FIELDS */
-  .field { margin-bottom: 14px; }
-  .field label { display: block; font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .field input, .field select, .field textarea { width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 6px; font-size: 13px; font-family: inherit; }
-  .field input:focus, .field select:focus, .field textarea:focus { outline: 1px solid var(--blaze); }
-  .field textarea { min-height: 80px; resize: vertical; font-family: monospace; }
-  .field select option { background: #222; }
-  .field .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+/* ── LEADERBOARD ── */
+.lb-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.lb-title{font-size:18px;font-weight:700;}
+.lb-subtitle{font-size:12px;color:var(--muted2);margin-top:2px;}
+.lb-list{display:flex;flex-direction:column;gap:8px;}
+.lb-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;transition:border-color 0.2s;}
+.lb-item:hover{border-color:var(--border2);}
+.lb-item.rank1{border-color:rgba(240,185,11,0.35);background:linear-gradient(90deg,rgba(240,185,11,0.06),transparent);}
+.lb-item.rank2{border-color:rgba(155,172,200,0.25);}
+.lb-item.rank3{border-color:rgba(200,121,65,0.25);}
+.rank-num{font-size:13px;font-weight:700;width:24px;text-align:center;flex-shrink:0;}
+.rank1 .rank-num{color:var(--gold);}
+.rank2 .rank-num{color:var(--silver);}
+.rank3 .rank-num{color:var(--bronze);}
+.lb-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--border2);}
+.lb-info{flex:1;min-width:0;}
+.lb-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lb-badges{display:flex;gap:4px;margin-top:3px;flex-wrap:wrap;}
+.badge{font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;}
+.badge-sub{background:var(--purpledim);color:var(--purple);border:1px solid rgba(155,108,245,0.2);}
+.badge-follower{background:var(--bluedim);color:var(--blue);border:1px solid rgba(76,142,245,0.2);}
+.badge-gift{background:var(--greendim);color:var(--green);border:1px solid rgba(34,212,122,0.2);}
+.badge-voter{background:var(--blazedim);color:var(--blaze);border:1px solid rgba(240,185,11,0.2);}
+.badge-mod{background:rgba(240,80,80,0.1);color:var(--red);border:1px solid rgba(240,80,80,0.2);}
+.badge-og{background:linear-gradient(90deg,rgba(240,185,11,0.15),rgba(155,108,245,0.15));color:var(--blaze2);border:1px solid rgba(240,185,11,0.3);}
+.lb-score{text-align:right;flex-shrink:0;}
+.score-val{font-size:18px;font-weight:700;color:var(--blaze);font-family:'JetBrains Mono',monospace;}
+.score-label{font-size:9px;color:var(--muted);font-weight:600;text-transform:uppercase;}
+.score-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden;}
+.score-bar{height:100%;background:linear-gradient(90deg,var(--blaze),var(--blaze2));border-radius:2px;transition:width 0.5s ease;}
 
-  /* RESPONSE */
-  .response-meta { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
-  .status-badge { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 5px; }
-  .status-2xx { background: rgba(34,197,94,0.15); color: var(--green); }
-  .status-4xx { background: rgba(239,68,68,0.15); color: var(--red); }
-  .status-err { background: rgba(239,68,68,0.15); color: var(--red); }
-  .response-time { font-size: 11px; color: var(--muted); }
-  pre { background: #0a0a0a; border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-size: 12px; overflow: auto; white-space: pre-wrap; word-break: break-all; max-height: 100%; }
-  .empty-state { color: var(--muted); font-size: 13px; padding: 20px 0; }
+/* ── MILESTONES ── */
+.milestone-list{display:flex;flex-direction:column;gap:8px;}
+.milestone-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;}
+.milestone-icon{font-size:20px;width:36px;text-align:center;}
+.milestone-info{flex:1;}
+.milestone-name{font-size:13px;font-weight:600;}
+.milestone-desc{font-size:11px;color:var(--muted2);margin-top:2px;}
+.milestone-pts{font-size:13px;font-weight:700;color:var(--blaze);font-family:'JetBrains Mono',monospace;}
 
-  /* OAUTH FLOW */
-  .oauth-flow { padding: 24px; }
-  .oauth-step { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
-  .oauth-step h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; color: var(--blaze); }
-  .oauth-step p { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
-  .tag { display: inline-block; background: var(--border); color: var(--muted); font-size: 10px; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+/* ── ALERTS ── */
+.alert-feed{display:flex;flex-direction:column;gap:8px;}
+.alert-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px;animation:slidein 0.3s ease;}
+@keyframes slidein{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+.alert-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+.alert-body{flex:1;}
+.alert-msg{font-size:12px;line-height:1.5;}
+.alert-msg b{color:var(--blaze);}
+.alert-time{font-size:10px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono',monospace;}
+.alert-item.follow{border-left:3px solid var(--blue);}
+.alert-item.sub{border-left:3px solid var(--purple);}
+.alert-item.gift{border-left:3px solid var(--green);}
+.alert-item.chat{border-left:3px solid var(--border2);}
+.alert-item.vote{border-left:3px solid var(--blaze);}
+.alert-item.milestone{border-left:3px solid var(--gold);background:var(--blazedim);}
+.alert-item.raid{border-left:3px solid var(--red);}
+.alert-item.stream{border-left:3px solid var(--green);}
 
-  /* WELCOME */
-  #welcome-panel { padding: 32px 24px; }
-  #welcome-panel h2 { font-size: 22px; font-weight: 700; color: var(--blaze); margin-bottom: 8px; }
-  #welcome-panel p { color: var(--muted); line-height: 1.7; margin-bottom: 20px; max-width: 600px; }
-  .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; }
-  .feature-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
-  .feature-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
-  .feature-card p { font-size: 12px; color: var(--muted); line-height: 1.5; }
-  .feature-icon { font-size: 20px; margin-bottom: 8px; }
+/* ── CHAT (right panel) ── */
+.panel-header{padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between;}
+.chat-feed{flex:1;overflow-y:auto;padding:10px;}
+.chat-msg{padding:6px 8px;border-radius:8px;margin-bottom:4px;font-size:12px;line-height:1.5;}
+.chat-msg:hover{background:var(--card);}
+.chat-sender{font-weight:700;margin-right:4px;}
+.chat-sender.owner{color:var(--blaze);}
+.chat-sender.moderator{color:var(--red);}
+.chat-sender.subscriber{color:var(--purple);}
+.chat-sender.vip{color:var(--green);}
+.chat-sender.og{color:var(--blaze2);}
+.chat-text{color:var(--muted2);}
+.chat-bot-msg{background:var(--blazedim);border:1px solid rgba(240,185,11,0.15);border-radius:8px;padding:6px 8px;margin-bottom:4px;font-size:12px;}
+.chat-bot-sender{color:var(--blaze);font-weight:700;}
+.chat-input-row{padding:10px;border-top:1px solid var(--border);display:flex;gap:8px;}
+.chat-input-row input{flex:1;background:var(--card);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:8px;font-size:12px;font-family:inherit;}
+.chat-input-row input:focus{outline:1px solid var(--blaze);}
 
-  /* LOGIN BUTTON */
-  .login-blaze-btn { background: var(--blaze); color: #000; border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
-  .login-blaze-btn:hover { background: var(--blaze-dark); }
-  .user-card { display: flex; align-items: center; gap: 8px; background: rgba(240,185,11,0.08); border: 1px solid rgba(240,185,11,0.2); border-radius: 8px; padding: 5px 10px; }
-  .user-card img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
-  .user-card .uname { font-size: 13px; font-weight: 700; color: #fff; }
-  .user-card .utype { font-size: 10px; color: var(--blaze); font-weight: 600; text-transform: uppercase; }
-  .logout-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 5px; padding: 3px 7px; cursor: pointer; font-size: 10px; margin-left: 4px; }
-  .logout-btn:hover { border-color: var(--red); color: var(--red); }
-  /* CALLBACK BANNER */
-  .callback-banner { background: rgba(240,185,11,0.1); border-bottom: 1px solid rgba(240,185,11,0.3); padding: 10px 24px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
-  .callback-banner b { color: var(--blaze); }
+/* ── SETUP OVERLAY ── */
+#setup-overlay{position:fixed;inset:0;background:rgba(8,11,16,0.95);z-index:100;display:flex;align-items:center;justify-content:center;}
+.setup-card{background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:36px;max-width:480px;width:100%;}
+.setup-card h2{font-size:24px;font-weight:700;color:var(--blaze);margin-bottom:6px;}
+.setup-card p{color:var(--muted2);font-size:13px;line-height:1.6;margin-bottom:24px;}
+.setup-field{margin-bottom:16px;}
+.setup-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.setup-field input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:10px 12px;border-radius:10px;font-size:13px;font-family:'JetBrains Mono',monospace;}
+.setup-field input:focus{outline:1px solid var(--blaze);}
+.setup-hint{font-size:11px;color:var(--muted);margin-top:4px;}
+.setup-divider{text-align:center;color:var(--muted);font-size:12px;margin:16px 0;position:relative;}
+.setup-divider::before,.setup-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border);}
+.setup-divider::before{left:0;} .setup-divider::after{right:0;}
 
-  /* SCROLLBAR */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+/* ── NOTIFICATION TOAST ── */
+#toast{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast-item{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:12px 16px;font-size:13px;min-width:280px;animation:toastin 0.3s ease;box-shadow:0 8px 30px rgba(0,0,0,0.4);}
+@keyframes toastin{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.toast-item.milestone{border-color:rgba(240,185,11,0.4);background:linear-gradient(90deg,rgba(240,185,11,0.1),var(--card));}
+
+/* ── EMPTY STATE ── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;color:var(--muted);text-align:center;gap:8px;}
+.empty-icon{font-size:32px;opacity:0.4;}
+.empty-text{font-size:13px;}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 </style>
 </head>
 <body>
 
-<header>
-  <div>
-    <div class="logo">⚡ Blaze API Tester</div>
-    <div class="subtitle">Test all Blaze Stream endpoints</div>
+<!-- SETUP OVERLAY -->
+<div id="setup-overlay">
+  <div class="setup-card">
+    <h2>⚡ Blaze Companion</h2>
+    <p>Stream loyalty intelligence for Blaze creators. Login with your Blaze account or paste a token to start tracking your most devoted community members in real time.</p>
+    <button class="btn" style="width:100%;padding:12px;font-size:14px;margin-bottom:16px;" onclick="startBlazeLogin()">⚡ Login with Blaze</button>
+    <div class="setup-divider">or paste token manually</div>
+    <div class="setup-field" style="margin-top:16px;">
+      <label>User Access Token</label>
+      <input id="setup-token" placeholder="Bearer token from Blaze OAuth">
+      <div class="setup-hint">Needs scopes: users.read, offline.access, channel.moderate, users.bot</div>
+    </div>
+    <div class="setup-field">
+      <label>Channel ID (UUID)</label>
+      <input id="setup-channel" placeholder="Your channel UUID">
+      <div class="setup-hint">Found in your Blaze channel settings or from /v1/users/profile</div>
+    </div>
+    <button class="btn" style="width:100%;padding:12px;font-size:14px;" onclick="startWithToken()">Connect →</button>
+    <div style="margin-top:12px;font-size:11px;color:var(--muted);text-align:center;">Client ID: UR4ghwgTTJ2rAE1_KBZgmCKmkvQtO4ux</div>
   </div>
-  <div style="margin-left:auto;" id="header-auth-area">
-    <button class="login-blaze-btn" onclick="startBlazeLogin()">⚡ Login with Blaze</button>
-  </div>
-</header>
-<div id="callback-banner" style="display:none;" class="callback-banner">
-  ⏳ <span id="callback-msg">Handling OAuth callback…</span>
 </div>
 
-<div class="layout">
+<!-- APP SHELL -->
+<div class="shell">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="logo"><div class="logo-dot"></div> Blaze Companion</div>
+    <div style="width:1px;height:24px;background:var(--border);margin:0 4px;"></div>
+    <div id="channel-label" style="font-size:13px;color:var(--muted2);">Not connected</div>
+    <div class="topbar-right">
+      <div id="conn-status" class="conn-status disconnected">Disconnected</div>
+      <div id="user-area"></div>
+      <button class="btn-ghost" onclick="showSetup()">⚙ Setup</button>
+    </div>
+  </div>
+
   <!-- SIDEBAR -->
   <div class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-section-title">Auth</div>
-      <button class="sidebar-btn active" onclick="showPanel('welcome')">🏠 Home</button>
-      <button class="sidebar-btn" onclick="showPanel('app-token')"><span class="method-badge POST">POST</span> App Token</button>
-      <button class="sidebar-btn" onclick="showPanel('oauth-flow')">🔐 OAuth Flow (User)</button>
+    <div class="sidebar-header">
+      <label>Channel ID</label>
+      <input id="channel-id-input" placeholder="UUID" oninput="onChannelIdChange()">
     </div>
-    <div class="sidebar-section">
-      <div class="sidebar-section-title">Channels</div>
-      <button class="sidebar-btn" onclick="showPanel('list-channels')"><span class="method-badge GET">GET</span> List Channels</button>
-      <button class="sidebar-btn" onclick="showPanel('channel-stats')"><span class="method-badge GET">GET</span> Channel Stats</button>
-      <button class="sidebar-btn" onclick="showPanel('live-stats')"><span class="method-badge GET">GET</span> Live Stats</button>
-      <button class="sidebar-btn" onclick="showPanel('channel-followers')"><span class="method-badge GET">GET</span> Followers</button>
-      <button class="sidebar-btn" onclick="showPanel('followed-channels')"><span class="method-badge GET">GET</span> Followed Channels</button>
-      <button class="sidebar-btn" onclick="showPanel('subscribers')"><span class="method-badge GET">GET</span> Subscribers</button>
-      <button class="sidebar-btn" onclick="showPanel('activities')"><span class="method-badge GET">GET</span> Activities</button>
-      <button class="sidebar-btn" onclick="showPanel('clips')"><span class="method-badge GET">GET</span> Clips</button>
-      <button class="sidebar-btn" onclick="showPanel('vods')"><span class="method-badge GET">GET</span> VODs</button>
-      <button class="sidebar-btn" onclick="showPanel('vips')"><span class="method-badge GET">GET</span> VIP Users</button>
-      <button class="sidebar-btn" onclick="showPanel('mods')"><span class="method-badge GET">GET</span> Mod Users</button>
-      <button class="sidebar-btn" onclick="showPanel('ogs')"><span class="method-badge GET">GET</span> OG Users</button>
-      <button class="sidebar-btn" onclick="showPanel('banned-users')"><span class="method-badge GET">GET</span> Banned Users</button>
-      <button class="sidebar-btn" onclick="showPanel('update-channel')"><span class="method-badge POST">POST</span> Update Channel Info</button>
-      <button class="sidebar-btn" onclick="showPanel('add-vip')"><span class="method-badge POST">POST</span> Add VIP</button>
-      <button class="sidebar-btn" onclick="showPanel('remove-vip')"><span class="method-badge DELETE">DELETE</span> Remove VIP</button>
-      <button class="sidebar-btn" onclick="showPanel('add-og')"><span class="method-badge POST">POST</span> Add OG</button>
-      <button class="sidebar-btn" onclick="showPanel('remove-og')"><span class="method-badge DELETE">DELETE</span> Remove OG</button>
+    <div class="sidebar-connect">
+      <button class="btn" style="width:100%;" id="connect-btn" onclick="connectSocket()">Connect to Channel</button>
     </div>
-    <div class="sidebar-section">
-      <div class="sidebar-section-title">Users</div>
-      <button class="sidebar-btn" onclick="showPanel('user-profile')"><span class="method-badge GET">GET</span> Get Profile</button>
-      <button class="sidebar-btn" onclick="showPanel('achievement-stats')"><span class="method-badge GET">GET</span> Achievement Stats</button>
-      <button class="sidebar-btn" onclick="showPanel('user-subscriptions')"><span class="method-badge GET">GET</span> Subscriptions</button>
-      <button class="sidebar-btn" onclick="showPanel('update-bio')"><span class="method-badge POST">POST</span> Update Bio</button>
-    </div>
-    <div class="sidebar-section">
-      <div class="sidebar-section-title">Chat</div>
-      <button class="sidebar-btn" onclick="showPanel('chat-messages')"><span class="method-badge GET">GET</span> Get Messages</button>
-      <button class="sidebar-btn" onclick="showPanel('send-chat')"><span class="method-badge POST">POST</span> Send Message</button>
-    </div>
-    <div class="sidebar-section">
-      <div class="sidebar-section-title">Categories</div>
-      <button class="sidebar-btn" onclick="showPanel('list-categories')"><span class="method-badge GET">GET</span> List Categories</button>
-    </div>
-    <div class="sidebar-section">
-      <div class="sidebar-section-title">Moderation</div>
-      <button class="sidebar-btn" onclick="showPanel('ban-user')"><span class="method-badge POST">POST</span> Ban User</button>
-      <button class="sidebar-btn" onclick="showPanel('unban-user')"><span class="method-badge DELETE">DELETE</span> Unban User</button>
-      <button class="sidebar-btn" onclick="showPanel('mute-user')"><span class="method-badge POST">POST</span> Mute User</button>
+    <div class="sidebar-section" style="overflow-y:auto;flex:1;">
+      <div class="section-label" style="margin-bottom:8px;">Live Stats</div>
+      <div class="stat-grid">
+        <div class="stat-card blaze"><div class="sv" id="stat-chatters">0</div><div class="sl">Chatters</div></div>
+        <div class="stat-card"><div class="sv" id="stat-msgs">0</div><div class="sl">Messages</div></div>
+        <div class="stat-card green"><div class="sv" id="stat-follows">0</div><div class="sl">Follows</div></div>
+        <div class="stat-card"><div class="sv" id="stat-subs">0</div><div class="sl">Subs</div></div>
+        <div class="stat-card"><div class="sv" id="stat-gifts">0</div><div class="sl">Gifts</div></div>
+        <div class="stat-card blaze"><div class="sv" id="stat-votes">0</div><div class="sl">Votes</div></div>
+      </div>
+      <div class="section-label" style="margin-top:16px;margin-bottom:8px;">Bot Commands</div>
+      <div class="cmd-list">
+        <div class="cmd-item"><code>!devoted</code><div class="cdesc">Top 5 most loyal chatters</div></div>
+        <div class="cmd-item"><code>!loyalty @user</code><div class="cdesc">Their rank & devotion score</div></div>
+        <div class="cmd-item"><code>!shoutout @user</code><div class="cdesc">Auto-shoutout with their stats</div></div>
+        <div class="cmd-item"><code>!milestone @user</code><div class="cdesc">Their next loyalty milestone</div></div>
+        <div class="cmd-item"><code>!leaderboard</code><div class="cdesc">Post top 3 in chat</div></div>
+        <div class="cmd-item"><code>!hug @user</code><div class="cdesc">Warm shoutout + score</div></div>
+        <div class="cmd-item"><code>!uptime</code><div class="cdesc">Bot uptime</div></div>
+      </div>
     </div>
   </div>
 
   <!-- MAIN -->
   <div class="main">
-    <!-- AUTH BAR -->
-    <div class="auth-bar">
-      <div>
-        <label>Client ID</label>
-        <input id="clientId" value="UR4ghwgTTJ2rAE1_KBZgmCKmkvQtO4ux" placeholder="Client ID">
-      </div>
-      <div>
-        <label>Client Secret</label>
-        <input id="clientSecret" value="IFwFHaqzi_sA0FfJ9nWiQSR0ug3GPUWZMr0qw3LvMZ0" type="password" placeholder="Client Secret">
-      </div>
-      <div>
-        <label>Access Token</label>
-        <input id="accessToken" placeholder="Bearer token (get from App Token or OAuth)">
-      </div>
-      <div id="tokenStatus" class="token-status none">No Token</div>
+    <div class="main-tabs">
+      <div class="tab active" onclick="switchTab('leaderboard',this)">🏆 Loyalty Board</div>
+      <div class="tab" onclick="switchTab('alerts',this)">🔔 Live Alerts</div>
+      <div class="tab" onclick="switchTab('milestones',this)">⭐ Milestones</div>
     </div>
-
-    <!-- PANELS -->
-    <div id="panel-container" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
-
-      <!-- WELCOME -->
-      <div id="welcome-panel">
-        <h2>Blaze API Explorer</h2>
-        <p>All credentials are pre-filled. Start by generating an <strong style="color:var(--blaze)">App Access Token</strong> (sidebar → App Token), then explore any endpoint. For user-scoped endpoints you'll need to complete the OAuth flow.</p>
-        <div class="feature-grid">
-          <div class="feature-card"><div class="feature-icon">📺</div><h4>Channels</h4><p>Browse live channels, stats, followers, subscribers, VODs, clips, and roles.</p></div>
-          <div class="feature-card"><div class="feature-icon">👤</div><h4>Users</h4><p>Fetch profiles, achievement stats, and subscription lists.</p></div>
-          <div class="feature-card"><div class="feature-icon">💬</div><h4>Chat</h4><p>Read and send chat messages via REST.</p></div>
-          <div class="feature-card"><div class="feature-icon">🎮</div><h4>Categories</h4><p>Search the full stream category catalog.</p></div>
-          <div class="feature-card"><div class="feature-icon">🔨</div><h4>Moderation</h4><p>Ban, unban, and mute users in your channel.</p></div>
-          <div class="feature-card"><div class="feature-icon">🔐</div><h4>OAuth</h4><p>Full user OAuth flow with PKCE for user-scoped tokens.</p></div>
+    <div class="main-body" id="main-body">
+      <!-- LEADERBOARD TAB -->
+      <div id="tab-leaderboard">
+        <div class="lb-header">
+          <div>
+            <div class="lb-title">Devotion Leaderboard</div>
+            <div class="lb-subtitle">Scored by chats, follows, subs, gifts & votes · updates live</div>
+          </div>
+          <button class="btn btn-sm" onclick="postLeaderboardToChat()">Post to Chat</button>
+        </div>
+        <div class="lb-list" id="lb-list">
+          <div class="empty"><div class="empty-icon">🎯</div><div class="empty-text">Connect to a channel to start tracking loyalty</div></div>
         </div>
       </div>
 
-      <!-- APP TOKEN -->
-      <div id="app-token-panel" style="display:none;" class="panel">
-        <div class="endpoint-info">
-          <div class="endpoint-title">Generate App Access Token</div>
-          <div class="endpoint-desc">Client credentials flow — no user login required. Works for public data endpoints.</div>
-          <div class="endpoint-url"><span class="method-badge POST">POST</span> https://blaze.stream/bapi/oauth2/token</div>
+      <!-- ALERTS TAB -->
+      <div id="tab-alerts" style="display:none;">
+        <div class="lb-header">
+          <div>
+            <div class="lb-title">Live Event Feed</div>
+            <div class="lb-subtitle">Every channel event in real time</div>
+          </div>
+          <button class="btn-ghost" onclick="clearAlerts()">Clear</button>
         </div>
-        <div class="content-split" style="flex:1;overflow:hidden;">
-          <div class="pane left-pane">
-            <div class="pane-header">Request</div>
-            <div class="pane-body">
-              <p style="color:var(--muted);font-size:12px;margin-bottom:16px;">Uses Client ID and Secret from the auth bar above. Grant type is automatically set to <span class="tag">client_credentials</span>.</p>
-              <button class="btn" onclick="getAppToken()">Generate App Token</button>
-            </div>
-          </div>
-          <div class="pane">
-            <div class="pane-header">Response</div>
-            <div class="pane-body" id="app-token-response"><div class="empty-state">Click "Generate App Token" to run</div></div>
-          </div>
+        <div class="alert-feed" id="alert-feed">
+          <div class="empty"><div class="empty-icon">📡</div><div class="empty-text">Waiting for events…</div></div>
         </div>
       </div>
 
-      <!-- OAUTH FLOW -->
-      <div id="oauth-flow-panel" style="display:none;overflow-y:auto;">
-        <div class="oauth-flow">
-          <div style="font-size:18px;font-weight:700;margin-bottom:4px;">OAuth User Flow</div>
-          <div style="color:var(--muted);font-size:13px;margin-bottom:20px;">Step-by-step PKCE flow to get a User Access Token</div>
-          <div class="oauth-step">
-            <h3>Step 1 — Generate Auth URL</h3>
-            <p>Generate the authorization URL with PKCE. The user will be redirected here to grant permissions.</p>
-            <div class="field"><label>Redirect URI</label><input id="oauth-redirect" value="http://localhost:3000/callback"></div>
-            <div class="field"><label>Scopes (comma separated)</label><input id="oauth-scopes" value="users.read,offline.access,channel.moderate,users.bot"></div>
-            <button class="btn" onclick="generateAuthUrl()">Generate Auth URL</button>
-            <div id="auth-url-result" style="margin-top:12px;"></div>
-          </div>
-          <div class="oauth-step">
-            <h3>Step 2 — Handle Callback</h3>
-            <p>After the user authorizes, Blaze redirects back with a <span class="tag">code</span> and <span class="tag">state</span>. Paste the full callback URL or just the code here.</p>
-            <div class="field"><label>Authorization Code (from callback URL)</label><input id="oauth-code" placeholder="code from ?code=..."></div>
-            <button class="btn" onclick="exchangeCode()">Exchange for Token</button>
-            <div id="exchange-result" style="margin-top:12px;"></div>
-          </div>
-          <div class="oauth-step">
-            <h3>Step 3 — Refresh Token</h3>
-            <p>Use the refresh token to get a new access token without re-auth.</p>
-            <div class="field"><label>Refresh Token</label><input id="refresh-token-input" placeholder="Paste refresh token"></div>
-            <button class="btn" onclick="refreshToken()">Refresh Token</button>
-            <div id="refresh-result" style="margin-top:12px;"></div>
+      <!-- MILESTONES TAB -->
+      <div id="tab-milestones" style="display:none;">
+        <div class="lb-header">
+          <div>
+            <div class="lb-title">Loyalty Milestones</div>
+            <div class="lb-subtitle">Devotion score thresholds that unlock recognition</div>
           </div>
         </div>
+        <div class="milestone-list">
+          <div class="milestone-item"><div class="milestone-icon">👀</div><div class="milestone-info"><div class="milestone-name">Lurker</div><div class="milestone-desc">First message in channel</div></div><div class="milestone-pts">10 pts</div></div>
+          <div class="milestone-item"><div class="milestone-icon">💬</div><div class="milestone-info"><div class="milestone-name">Regular</div><div class="milestone-desc">50+ messages sent</div></div><div class="milestone-pts">100 pts</div></div>
+          <div class="milestone-item"><div class="milestone-icon">⭐</div><div class="milestone-info"><div class="milestone-name">Devoted</div><div class="milestone-desc">200+ messages or subscribed</div></div><div class="milestone-pts">250 pts</div></div>
+          <div class="milestone-item"><div class="milestone-icon">🔥</div><div class="milestone-info"><div class="milestone-name">Fanatic</div><div class="milestone-desc">500+ messages or gifted subs</div></div><div class="milestone-pts">500 pts</div></div>
+          <div class="milestone-item"><div class="milestone-icon">💎</div><div class="milestone-info"><div class="milestone-name">Diamond</div><div class="milestone-desc">1000+ messages + subscribed</div></div><div class="milestone-pts">1000 pts</div></div>
+          <div class="milestone-item"><div class="milestone-icon">👑</div><div class="milestone-info"><div class="milestone-name">Legend</div><div class="milestone-desc">Top chatter + sub + gifts</div></div><div class="milestone-pts">2000 pts</div></div>
+        </div>
       </div>
+    </div>
+  </div>
 
-      <!-- OAUTH FLOW (Real one-click) -->
-      <div id="oauth-flow-panel" style="display:none;overflow-y:auto;">
-        <div class="oauth-flow">
-          <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Login with Blaze (User OAuth)</div>
-          <div style="color:var(--muted);font-size:13px;margin-bottom:20px;">One-click PKCE flow — click the button in the header or below. After you approve on Blaze, you'll be redirected back here and the token auto-fills.</div>
-          <div class="oauth-step">
-            <h3>Step 1 — Click Login</h3>
-            <p>Hit the button below. We call Blaze to generate an auth URL (PKCE), save the state + verifier in sessionStorage, then redirect you to Blaze's login page.</p>
-            <button class="btn" onclick="startBlazeLogin()">⚡ Login with Blaze</button>
-            <div id="auth-url-result" style="margin-top:12px;"></div>
-          </div>
-          <div class="oauth-step">
-            <h3>Step 2 — Approve on Blaze</h3>
-            <p>You'll see a Blaze screen asking to authorize this app with scopes: <span class="tag">users.read</span> <span class="tag">offline.access</span> <span class="tag">channel.moderate</span> <span class="tag">users.bot</span>. Click Approve.</p>
-          </div>
-          <div class="oauth-step">
-            <h3>Step 3 — Auto Callback</h3>
-            <p>Blaze redirects you back here with a <span class="tag">?code=</span> in the URL. The page detects it automatically, exchanges the code for a User Access Token, and fills it in the auth bar above. No manual pasting needed.</p>
-            <div id="exchange-result" style="margin-top:8px;"></div>
-          </div>
-          <div class="oauth-step">
-            <h3>Manual Code Entry (fallback)</h3>
-            <p>If auto-exchange fails, paste your code here.</p>
-            <div class="field"><label>Authorization Code</label><input id="oauth-code" placeholder="code from ?code=..."></div>
-            <div class="field"><label>Redirect URI (must match registered)</label><input id="oauth-redirect" value="https://hoteminai.vercel.app/"></div>
-            <button class="btn" onclick="exchangeCodeManual()">Exchange Code</button>
-            <div id="manual-exchange-result" style="margin-top:8px;"></div>
-          </div>
-          <div class="oauth-step">
-            <h3>Refresh Token</h3>
-            <p>Exchange a saved refresh token for a new access token.</p>
-            <div class="field"><label>Refresh Token</label><input id="refresh-token-input" placeholder="Paste refresh token"></div>
-            <button class="btn" onclick="refreshToken()">Refresh</button>
-            <div id="refresh-result" style="margin-top:8px;"></div>
-          </div>
-        </div>
-      </div>
-      <div id="endpoint-panel" style="display:none;" class="panel">
-        <div class="endpoint-info">
-          <div class="endpoint-title" id="ep-title"></div>
-          <div class="endpoint-desc" id="ep-desc"></div>
-          <div class="endpoint-url" id="ep-url"></div>
-        </div>
-        <div class="content-split" style="flex:1;overflow:hidden;">
-          <div class="pane left-pane">
-            <div class="pane-header">Parameters</div>
-            <div class="pane-body" id="ep-fields"></div>
-          </div>
-          <div class="pane">
-            <div class="pane-header">
-              Response
-              <button class="btn-outline" onclick="copyResponse()" style="font-size:10px;padding:4px 8px;">Copy</button>
-            </div>
-            <div class="pane-body" id="ep-response"><div class="empty-state">Hit "Run" to execute</div></div>
-          </div>
-        </div>
-      </div>
-
+  <!-- RIGHT PANEL — LIVE CHAT -->
+  <div class="rightpanel">
+    <div class="panel-header">
+      Live Chat
+      <button class="btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="clearChat()">Clear</button>
+    </div>
+    <div class="chat-feed" id="chat-feed">
+      <div class="empty"><div class="empty-icon">💬</div><div class="empty-text">Chat will appear here</div></div>
+    </div>
+    <div class="chat-input-row">
+      <input id="chat-input" placeholder="Send as bot…" onkeydown="if(event.key==='Enter')sendBotMessage()">
+      <button class="btn btn-sm" onclick="sendBotMessage()">Send</button>
     </div>
   </div>
 </div>
 
+<!-- TOAST CONTAINER -->
+<div id="toast"></div>
+
 <script>
-const CLIENT_ID = () => document.getElementById('clientId').value.trim();
-const CLIENT_SECRET = () => document.getElementById('clientSecret').value.trim();
-const ACCESS_TOKEN = () => document.getElementById('accessToken').value.trim();
-const BASE = 'https://api.blaze.stream/v1';
+// ── CONFIG ──
+const CLIENT_ID = 'UR4ghwgTTJ2rAE1_KBZgmCKmkvQtO4ux';
+const CLIENT_SECRET = 'IFwFHaqzi_sA0FfJ9nWiQSR0ug3GPUWZMr0qw3LvMZ0';
+const API = 'https://api.blaze.stream/v1';
+const REDIRECT = window.location.href.split('?')[0];
 
-let lastResponse = '';
+// ── STATE ──
+let accessToken = '';
+let channelId = '';
+let userId = '';
+let socket = null;
+let socketSessionId = '';
+let connectedAt = Date.now();
+let stats = { chatters:0, msgs:0, follows:0, subs:0, gifts:0, votes:0 };
+let loyalty = {}; // userId -> { username, displayName, avatarUrl, score, msgs, follows, subs, gifts, votes, isSubscriber, isFollower, lastSeen, milestone }
+let alertsCleared = false;
 
-// ── Token status watcher ──
-document.getElementById('accessToken').addEventListener('input', updateTokenStatus);
-function updateTokenStatus() {
-  const el = document.getElementById('tokenStatus');
-  const t = ACCESS_TOKEN();
-  el.textContent = t ? '✓ Token Set' : 'No Token';
-  el.className = 'token-status ' + (t ? 'ok' : 'none');
+// ── SCORING ──
+const SCORES = { msg:1, follow:10, sub:50, gift:30, vote:5 };
+const MILESTONES = [
+  { pts:10, name:'Lurker', icon:'👀' },
+  { pts:100, name:'Regular', icon:'💬' },
+  { pts:250, name:'Devoted', icon:'⭐' },
+  { pts:500, name:'Fanatic', icon:'🔥' },
+  { pts:1000, name:'Diamond', icon:'💎' },
+  { pts:2000, name:'Legend', icon:'👑' }
+];
+
+function getMilestone(score) {
+  let m = MILESTONES[0];
+  for (const ms of MILESTONES) { if (score >= ms.pts) m = ms; }
+  return m;
+}
+function getNextMilestone(score) {
+  for (const ms of MILESTONES) { if (score < ms.pts) return ms; }
+  return null;
 }
 
-// ── Panel switcher ──
-function showPanel(name) {
-  document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-
-  const panels = ['welcome-panel','app-token-panel','oauth-flow-panel','endpoint-panel'];
-  panels.forEach(p => { const el = document.getElementById(p); if (el) el.style.display = 'none'; });
-
-  const simple = ['welcome','app-token','oauth-flow'];
-  if (simple.includes(name)) {
-    document.getElementById(name + '-panel').style.display = name === 'oauth-flow' ? 'block' : 'flex';
-    if (name === 'oauth-flow') document.getElementById(name + '-panel').style.flexDirection = 'column';
-    return;
+function addScore(uid, username, displayName, avatarUrl, type, amount=1, meta={}) {
+  if (!uid) return;
+  if (!loyalty[uid]) {
+    loyalty[uid] = { username, displayName, avatarUrl, score:0, msgs:0, follows:0, subs:0, gifts:0, votes:0,
+      isSubscriber:false, isFollower:false, lastSeen:Date.now(), milestone:MILESTONES[0] };
+    stats.chatters = Object.keys(loyalty).length;
+    document.getElementById('stat-chatters').textContent = stats.chatters;
   }
+  const u = loyalty[uid];
+  u.username = username || u.username;
+  u.displayName = displayName || u.displayName;
+  u.avatarUrl = avatarUrl || u.avatarUrl;
+  u.lastSeen = Date.now();
+  if (meta.isSubscriber !== undefined) u.isSubscriber = meta.isSubscriber;
+  if (meta.isFollower !== undefined) u.isFollower = meta.isFollower;
 
-  // load endpoint config
-  const cfg = ENDPOINTS[name];
-  if (!cfg) return;
-  document.getElementById('ep-title').textContent = cfg.title;
-  document.getElementById('ep-desc').textContent = cfg.desc;
-  document.getElementById('ep-url').innerHTML = `<span class="method-badge ${cfg.method}">${cfg.method}</span> ${BASE}${cfg.path}`;
-  document.getElementById('ep-fields').innerHTML = buildFields(cfg) + `<button class="btn" style="margin-top:12px;" onclick="runEndpoint('${name}')">Run →</button>`;
-  document.getElementById('ep-response').innerHTML = '<div class="empty-state">Hit "Run" to execute</div>';
-  document.getElementById('endpoint-panel').style.display = 'flex';
-  document.getElementById('endpoint-panel').style.flexDirection = 'column';
-}
+  const prev = getMilestone(u.score);
+  const pts = SCORES[type] * amount;
+  u.score += pts;
+  u[type === 'msg' ? 'msgs' : type+'s'] = (u[type === 'msg' ? 'msgs' : type+'s'] || 0) + amount;
 
-function buildFields(cfg) {
-  if (!cfg.fields || cfg.fields.length === 0) {
-    return '<p style="color:var(--muted);font-size:12px;margin-bottom:12px;">No parameters required — token from auth bar is used.</p>';
-  }
-  return cfg.fields.map(f => `
-    <div class="field">
-      <label>${f.label}${f.required ? ' <span style="color:var(--red)">*</span>' : ''}</label>
-      ${f.type === 'select'
-        ? `<select id="field-${f.key}">${f.options.map(o => `<option value="${o.v}">${o.l}</option>`).join('')}</select>`
-        : `<input id="field-${f.key}" type="${f.type||'text'}" placeholder="${f.placeholder||''}" value="${f.default||''}">`}
-      ${f.hint ? `<div class="hint">${f.hint}</div>` : ''}
-    </div>
-  `).join('');
-}
-
-function getField(key) {
-  const el = document.getElementById('field-' + key);
-  return el ? el.value.trim() : '';
-}
-
-// ── Request runner ──
-async function runEndpoint(name) {
-  const cfg = ENDPOINTS[name];
-  const el = document.getElementById('ep-response');
-  el.innerHTML = '<div style="color:var(--muted)">Running…</div>';
-
-  const headers = {
-    'client-id': CLIENT_ID(),
-    'authorization': `Bearer ${ACCESS_TOKEN()}`,
-    'content-type': 'application/json',
-    'accept': 'application/json'
-  };
-
-  let url = BASE + cfg.path;
-  let options = { method: cfg.method, headers };
-
-  // build query params
-  const qp = cfg.queryParams ? cfg.queryParams(getField) : null;
-  if (qp) {
-    const q = new URLSearchParams();
-    Object.entries(qp).forEach(([k,v]) => { if (v) q.append(k, v); });
-    const qs = q.toString();
-    if (qs) url += '?' + qs;
-  }
-
-  // build body
-  if (cfg.method !== 'GET' && cfg.body) {
-    options.body = JSON.stringify(cfg.body(getField));
-  }
-
-  const t0 = Date.now();
-  try {
-    const res = await fetch(url, options);
-    const ms = Date.now() - t0;
-    let data;
-    try { data = await res.json(); } catch { data = { raw: await res.text() }; }
-    showResponse(el, res.status, ms, data);
-  } catch(e) {
-    el.innerHTML = renderResponse(null, 0, { error: e.message });
-  }
-}
-
-function showResponse(el, status, ms, data) {
-  const json = JSON.stringify(data, null, 2);
-  lastResponse = json;
-  const cls = status >= 200 && status < 300 ? 'status-2xx' : 'status-4xx';
-  el.innerHTML = `
-    <div class="response-meta">
-      <span class="status-badge ${cls}">${status}</span>
-      <span class="response-time">${ms}ms</span>
-    </div>
-    <pre>${escapeHtml(json)}</pre>`;
-}
-
-function renderResponse(el, status, data) {
-  return `<div class="response-meta"><span class="status-badge status-err">Error</span></div><pre>${escapeHtml(JSON.stringify(data,null,2))}</pre>`;
-}
-
-function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function copyResponse() { navigator.clipboard.writeText(lastResponse); }
-
-// ── App Token ──
-async function getAppToken() {
-  const el = document.getElementById('app-token-response');
-  el.innerHTML = '<div style="color:var(--muted)">Requesting…</div>';
-  const t0 = Date.now();
-  try {
-    const res = await fetch(`${AUTH_BASE}/token`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'accept': 'application/json' },
-      body: JSON.stringify({ clientId: CLIENT_ID(), clientSecret: CLIENT_SECRET(), grantType: 'client_credentials' })
-    });
-    const ms = Date.now() - t0;
-    const data = await res.json();
-    const json = JSON.stringify(data, null, 2);
-    lastResponse = json;
-    const cls = res.ok ? 'status-2xx' : 'status-4xx';
-    el.innerHTML = `
-      <div class="response-meta">
-        <span class="status-badge ${cls}">${res.status}</span>
-        <span class="response-time">${ms}ms</span>
-        ${data.accessToken ? '<span style="color:var(--green);font-size:11px;">✓ Token auto-filled above</span>' : ''}
-      </div>
-      <pre>${escapeHtml(json)}</pre>`;
-    if (data.accessToken) {
-      document.getElementById('accessToken').value = data.accessToken;
-      updateTokenStatus();
+  const next = getMilestone(u.score);
+  if (next.pts > prev.pts) {
+    // Milestone reached!
+    u.milestone = next;
+    pushAlert('milestone', `🎉 <b>${u.displayName||u.username}</b> reached <b>${next.icon} ${next.name}</b> (${u.score} pts)!`, '🏆');
+    toast(`${next.icon} ${u.displayName||u.username} is now a ${next.name}!`, true);
+    if (accessToken && channelId) {
+      sendChat(`🏆 ${next.icon} @${u.username} just reached ${next.name} status with ${u.score} loyalty points! Congrats!`);
     }
-  } catch(e) {
-    el.innerHTML = `<pre style="color:var(--red)">${e.message}</pre>`;
   }
+  renderLeaderboard();
 }
 
-// ── Blaze Login (Real PKCE OAuth) ──
+// ── OAUTH ──
 async function startBlazeLogin() {
-  const clientId = CLIENT_ID();
-  const clientSecret = CLIENT_SECRET();
-  // Use current page URL as redirect (works for file:// or live server)
-  const redirectUri = window.location.href.split('?')[0];
-  document.getElementById('auth-url-result').innerHTML = '<div style="color:var(--muted);font-size:12px;">Generating auth URL…</div>';
   try {
     const res = await fetch('https://blaze.stream/bapi/oauth2/generate-auth-url', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'accept': 'application/json' },
-      body: JSON.stringify({
-        clientId, clientSecret, redirectUri,
-        scopes: ['users.read', 'offline.access', 'channel.moderate', 'users.bot']
-      })
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ clientId:CLIENT_ID, clientSecret:CLIENT_SECRET, redirectUri:REDIRECT,
+        scopes:['users.read','offline.access','channel.moderate','users.bot'] })
     });
     const data = await res.json();
     if (data.url) {
-      // Persist PKCE values + redirect URI for when we come back
-      sessionStorage.setItem('blaze_state', data.state);
-      sessionStorage.setItem('blaze_verifier', data.codeVerifier);
-      sessionStorage.setItem('blaze_redirect', redirectUri);
+      sessionStorage.setItem('bc_state', data.state);
+      sessionStorage.setItem('bc_verifier', data.codeVerifier);
       window.location.href = data.url;
-    } else {
-      document.getElementById('auth-url-result').innerHTML = `<pre style="color:var(--red)">${escapeHtml(JSON.stringify(data,null,2))}</pre>`;
-    }
-  } catch(e) {
-    document.getElementById('auth-url-result').innerHTML = `<div style="color:var(--red)">${e.message}</div>`;
-  }
+    } else { toast('Auth URL error: ' + JSON.stringify(data)); }
+  } catch(e) { toast('Login failed: ' + e.message); }
 }
 
-// ── Auto callback handler — runs on page load ──
-async function handleOAuthCallback() {
+async function handleCallback() {
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
-  const returnedState = params.get('state');
-  if (!code) return; // no callback, normal load
+  if (!code) return;
+  window.history.replaceState({}, '', window.location.pathname);
 
-  const banner = document.getElementById('callback-banner');
-  const msg = document.getElementById('callback-msg');
-  banner.style.display = 'flex';
-  msg.innerHTML = '⏳ <b>Got Blaze callback</b> — exchanging code for token…';
+  const verifier = sessionStorage.getItem('bc_verifier') || '';
+  try {
+    const res = await fetch('https://blaze.stream/bapi/oauth2/token', {
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ clientId:CLIENT_ID, clientSecret:CLIENT_SECRET, code, codeVerifier:verifier,
+        redirectUri:REDIRECT, grantType:'authorization_code' })
+    });
+    const data = await res.json();
+    if (data.accessToken) {
+      accessToken = data.accessToken;
+      sessionStorage.setItem('bc_token', accessToken);
+      if (data.refreshToken) sessionStorage.setItem('bc_refresh', data.refreshToken);
+      await loadUserProfile();
+      document.getElementById('setup-overlay').style.display = 'none';
+      toast('✅ Logged in with Blaze!');
+    }
+  } catch(e) { toast('Token exchange failed: ' + e.message); }
+}
 
-  const expectedState = sessionStorage.getItem('blaze_state');
-  const codeVerifier = sessionStorage.getItem('blaze_verifier');
-  const redirectUri = sessionStorage.getItem('blaze_redirect') || window.location.href.split('?')[0];
+async function loadUserProfile() {
+  try {
+    const res = await fetch(`${API}/users/profile`, {
+      headers:{ 'client-id':CLIENT_ID, 'authorization':`Bearer ${accessToken}`, 'content-type':'application/json' }
+    });
+    const data = await res.json();
+    const u = data.data || data;
+    if (u && (u.username || u.displayName)) {
+      userId = u.id || u.userId || '';
+      // Auto-set channelId to user's own channel
+      if (!channelId && userId) {
+        channelId = userId;
+        document.getElementById('channel-id-input').value = channelId;
+        document.getElementById('setup-channel').value = channelId;
+      }
+      document.getElementById('user-area').innerHTML = `
+        <div class="user-pill">
+          ${u.avatarUrl ? `<img src="${u.avatarUrl}" onerror="this.style.display='none'">` : ''}
+          <span class="uname">${u.displayName||u.username}</span>
+        </div>`;
+      document.getElementById('channel-label').textContent = `@${u.username}`;
+    }
+  } catch(e) {}
+}
 
-  if (returnedState && expectedState && returnedState !== expectedState) {
-    msg.innerHTML = '❌ <b>State mismatch</b> — possible CSRF. Aborting.';
+function startWithToken() {
+  const t = document.getElementById('setup-token').value.trim();
+  const ch = document.getElementById('setup-channel').value.trim();
+  if (!t) { toast('Paste your access token'); return; }
+  accessToken = t;
+  if (ch) { channelId = ch; document.getElementById('channel-id-input').value = ch; }
+  sessionStorage.setItem('bc_token', t);
+  if (ch) sessionStorage.setItem('bc_channel', ch);
+  loadUserProfile().then(() => {
+    document.getElementById('setup-overlay').style.display = 'none';
+    if (channelId) connectSocket();
+  });
+}
+
+function showSetup() { document.getElementById('setup-overlay').style.display = 'flex'; }
+function onChannelIdChange() { channelId = document.getElementById('channel-id-input').value.trim(); }
+
+// ── SOCKET.IO ──
+async function connectSocket() {
+  channelId = document.getElementById('channel-id-input').value.trim() || channelId;
+  if (!channelId) { toast('Enter a Channel ID first'); return; }
+  if (!accessToken) { toast('Login first'); return; }
+
+  setConnStatus('connecting');
+  document.getElementById('connect-btn').textContent = 'Connecting…';
+
+  if (socket) { socket.disconnect(); }
+
+  socket = io('https://blaze.stream', { path:'/ws', transports:['websocket'] });
+
+  socket.on('connect', () => {
+    setConnStatus('connecting');
+  });
+
+  socket.on('eventsub', async (msg) => {
+    const { metadata, payload } = msg;
+
+    if (metadata.messageType === 'session_welcome') {
+      socketSessionId = payload.sessionId;
+      await createSubscriptions();
+      setConnStatus('connected');
+      document.getElementById('connect-btn').textContent = 'Connected ✓';
+      document.getElementById('channel-label').textContent = channelId.slice(0,8) + '…';
+      connectedAt = Date.now();
+      pushAlert('stream', 'Bot connected to channel. Tracking loyalty in real time.', '⚡');
+      return;
+    }
+
+    handleEvent(metadata.subscriptionType, payload);
+  });
+
+  socket.on('disconnect', () => {
+    setConnStatus('disconnected');
+    document.getElementById('connect-btn').textContent = 'Reconnect';
+  });
+
+  socket.on('connect_error', (e) => {
+    setConnStatus('disconnected');
+    document.getElementById('connect-btn').textContent = 'Connect to Channel';
+    toast('Connection error: ' + e.message);
+  });
+}
+
+async function createSubscriptions() {
+  const types = [
+    'channel.chat.message',
+    'channel.follow',
+    'channel.unfollow',
+    'channel.subscribe',
+    'channel.subscription.gift',
+    'channel.vote',
+    'channel.ban',
+    'channel.unban',
+    'channel.raid',
+    'channel.moderate',
+    'stream.online',
+    'stream.offline',
+  ];
+  for (const type of types) {
+    try {
+      await fetch(`${API}/events/subscriptions`, {
+        method:'POST',
+        headers:{ 'client-id':CLIENT_ID, 'authorization':`Bearer ${accessToken}`, 'content-type':'application/json' },
+        body: JSON.stringify({ type, version:'1', sessionId:socketSessionId, condition:{ channelId } })
+      });
+    } catch(e) {}
+  }
+}
+
+// ── EVENT HANDLER ──
+function handleEvent(type, payload) {
+  switch(type) {
+    case 'channel.chat.message': {
+      const { sender, message } = payload;
+      stats.msgs++;
+      document.getElementById('stat-msgs').textContent = stats.msgs;
+      addScore(sender.id, sender.username, sender.displayName, sender.avatarUrl, 'msg', 1, {
+        isSubscriber: sender.isSubscriber, isFollower: sender.isFollower
+      });
+      addChatMessage(sender, message);
+      // Bot commands
+      if (message.startsWith('!')) handleBotCommand(message, sender);
+      break;
+    }
+    case 'channel.follow': {
+      const { follower } = payload;
+      stats.follows++;
+      document.getElementById('stat-follows').textContent = stats.follows;
+      addScore(follower.id, follower.username, follower.displayName, follower.avatarUrl, 'follow', 1, { isFollower:true });
+      pushAlert('follow', `<b>${follower.displayName||follower.username}</b> followed the channel! (+10 pts)`, '💙');
+      toast(`💙 ${follower.displayName||follower.username} followed!`);
+      break;
+    }
+    case 'channel.subscribe': {
+      const { subscriber } = payload;
+      stats.subs++;
+      document.getElementById('stat-subs').textContent = stats.subs;
+      addScore(subscriber.id, subscriber.username, subscriber.displayName, subscriber.avatarUrl, 'sub', 1, { isSubscriber:true });
+      pushAlert('sub', `<b>${subscriber.displayName||subscriber.username}</b> subscribed! (+50 pts)`, '💜');
+      toast(`💜 ${subscriber.displayName||subscriber.username} subscribed!`);
+      break;
+    }
+    case 'channel.subscription.gift': {
+      const { sender, giftCount } = payload;
+      stats.gifts += giftCount;
+      document.getElementById('stat-gifts').textContent = stats.gifts;
+      addScore(sender.id, sender.username, sender.displayName, sender.avatarUrl, 'gift', giftCount);
+      pushAlert('gift', `<b>${sender.displayName||sender.username}</b> gifted <b>${giftCount}</b> sub${giftCount>1?'s':''}! (+${SCORES.gift*giftCount} pts)`, '🎁');
+      toast(`🎁 ${sender.displayName||sender.username} gifted ${giftCount} subs!`);
+      break;
+    }
+    case 'channel.vote': {
+      const { voter, amount } = payload;
+      stats.votes += amount;
+      document.getElementById('stat-votes').textContent = stats.votes;
+      addScore(voter.id, voter.username, voter.displayName, voter.avatarUrl, 'vote', 1);
+      pushAlert('vote', `<b>${voter.displayName||voter.username}</b> voted (${amount})! (+${SCORES.vote} pts)`, '⚡');
+      break;
+    }
+    case 'channel.unfollow': {
+      const { follower } = payload;
+      // Reduce score slightly
+      if (loyalty[follower.id]) { loyalty[follower.id].score = Math.max(0, loyalty[follower.id].score - 5); loyalty[follower.id].isFollower=false; renderLeaderboard(); }
+      pushAlert('follow', `<b>${follower.displayName||follower.username}</b> unfollowed.`, '💔');
+      break;
+    }
+    case 'channel.raid': {
+      const { raider } = payload;
+      pushAlert('raid', `🚨 <b>${raider.displayName||raider.username}</b> is raiding!`, '🚨');
+      toast(`🚨 RAID from ${raider.displayName||raider.username}!`, true);
+      break;
+    }
+    case 'channel.ban': {
+      const { bannedUser } = payload;
+      pushAlert('sub', `<b>${bannedUser.displayName||bannedUser.username}</b> was banned.`, '🔨');
+      break;
+    }
+    case 'channel.unban': {
+      const { unbannedUser } = payload;
+      pushAlert('follow', `<b>${unbannedUser.displayName||unbannedUser.username}</b> was unbanned.`, '✅');
+      break;
+    }
+    case 'stream.online': {
+      pushAlert('stream', `🟢 Stream is <b>LIVE</b>! "${payload.title}" — ${payload.category?.name||''}`, '🟢');
+      toast('🟢 Stream is LIVE!', true);
+      break;
+    }
+    case 'stream.offline': {
+      pushAlert('stream', `Stream ended. Duration: ${Math.round((payload.durationSeconds||0)/60)} min.`, '🔴');
+      break;
+    }
+    case 'channel.moderate': {
+      pushAlert('sub', `Mod action: <b>${payload.action}</b> on <b>${payload.targetUser?.username}</b> by ${payload.moderator?.username}`, '🛡');
+      break;
+    }
+  }
+}
+
+// ── BOT COMMANDS ──
+async function handleBotCommand(message, sender) {
+  const parts = message.trim().split(/\s+/);
+  const cmd = parts[0].toLowerCase();
+  const arg = parts.slice(1).join(' ').replace('@','');
+
+  switch(cmd) {
+    case '!devoted': {
+      const top = getTopUsers(5);
+      if (!top.length) { sendChat('No data yet — keep chatting!'); return; }
+      const lines = top.map((u,i) => `${['🥇','🥈','🥉','4.','5.'][i]} @${u.username} (${u.score} pts)`);
+      sendChat(`🏆 TOP DEVOTED: ${lines.join(' | ')}`);
+      break;
+    }
+    case '!loyalty': {
+      const target = arg || sender.username;
+      const u = findUser(target);
+      if (!u) { sendChat(`@${target} hasn't been tracked yet.`); return; }
+      const ms = getMilestone(u.score);
+      const next = getNextMilestone(u.score);
+      const rank = getRank(u.id);
+      sendChat(`${ms.icon} @${u.username} — Rank #${rank} | ${u.score} pts | ${ms.name}${next ? ` (next: ${next.name} @ ${next.pts} pts)` : ' (MAX)'}`);
+      break;
+    }
+    case '!shoutout': {
+      if (!arg) { sendChat('Usage: !shoutout @username'); return; }
+      const u = findUser(arg);
+      if (!u) { sendChat(`@${arg} hasn't chatted here yet!`); return; }
+      const ms = getMilestone(u.score);
+      sendChat(`📣 Shoutout to @${u.username}! ${ms.icon} ${ms.name} with ${u.score} loyalty pts — ${u.msgs||0} messages, ${u.follows||0} follows, ${u.subs||0} subs! Go show them love! ⚡`);
+      break;
+    }
+    case '!milestone': {
+      const target = arg || sender.username;
+      const u = findUser(target);
+      if (!u) { sendChat(`@${target} not found.`); return; }
+      const next = getNextMilestone(u.score);
+      const ms = getMilestone(u.score);
+      if (!next) { sendChat(`👑 @${u.username} is already a LEGEND — max tier reached!`); return; }
+      const needed = next.pts - u.score;
+      sendChat(`${ms.icon} @${u.username} needs ${needed} more points to reach ${next.icon} ${next.name}!`);
+      break;
+    }
+    case '!leaderboard': {
+      await postLeaderboardToChat();
+      break;
+    }
+    case '!hug': {
+      if (!arg) { sendChat('Usage: !hug @username'); return; }
+      const u = findUser(arg) || { username:arg, score:0 };
+      sendChat(`🤗 Sending a big hug to @${u.username}! They're one of our ${getMilestone(u.score).name} members! ⚡💛`);
+      break;
+    }
+    case '!uptime': {
+      const mins = Math.round((Date.now()-connectedAt)/60000);
+      sendChat(`⚡ Blaze Companion has been running for ${mins} minute${mins!==1?'s':''}. Tracking ${Object.keys(loyalty).length} members!`);
+      break;
+    }
+  }
+}
+
+async function sendChat(message) {
+  if (!accessToken || !channelId) return;
+  try {
+    await fetch(`${API}/chats/messages`, {
+      method:'POST',
+      headers:{ 'client-id':CLIENT_ID, 'authorization':`Bearer ${accessToken}`, 'content-type':'application/json' },
+      body: JSON.stringify({ channelId, message })
+    });
+    addBotChatMessage(message);
+  } catch(e) {}
+}
+
+async function sendBotMessage() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  await sendChat(msg);
+}
+
+async function postLeaderboardToChat() {
+  const top = getTopUsers(3);
+  if (!top.length) { toast('No data yet'); return; }
+  const medals = ['🥇','🥈','🥉'];
+  const lines = top.map((u,i) => `${medals[i]} @${u.username} — ${u.score} pts (${getMilestone(u.score).name})`);
+  sendChat(`⚡ DEVOTION LEADERBOARD ⚡ ${lines.join(' | ')} | powered by Blaze Companion`);
+}
+
+// ── HELPERS ──
+function getTopUsers(n) {
+  return Object.entries(loyalty)
+    .sort((a,b) => b[1].score - a[1].score)
+    .slice(0,n)
+    .map(([id,u]) => ({...u, id}));
+}
+
+function findUser(username) {
+  const un = username.toLowerCase().replace('@','');
+  const entry = Object.entries(loyalty).find(([,u]) => (u.username||'').toLowerCase() === un);
+  return entry ? {...entry[1], id:entry[0]} : null;
+}
+
+function getRank(uid) {
+  const sorted = Object.entries(loyalty).sort((a,b) => b[1].score - a[1].score);
+  return sorted.findIndex(([id]) => id === uid) + 1;
+}
+
+// ── RENDER ──
+function renderLeaderboard() {
+  const top = getTopUsers(20);
+  const maxScore = top[0]?.score || 1;
+  const list = document.getElementById('lb-list');
+  if (!top.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🎯</div><div class="empty-text">Connect to a channel to start tracking loyalty</div></div>';
     return;
   }
+  list.innerHTML = top.map((u,i) => {
+    const rank = i+1;
+    const ms = getMilestone(u.score);
+    const pct = Math.round((u.score/maxScore)*100);
+    const badges = [];
+    if (u.isSubscriber) badges.push('<span class="badge badge-sub">SUB</span>');
+    if (u.isFollower) badges.push('<span class="badge badge-follower">FOLLOWER</span>');
+    if (u.gifts > 0) badges.push('<span class="badge badge-gift">GIFTER</span>');
+    if (u.votes > 0) badges.push('<span class="badge badge-voter">VOTER</span>');
+    return `
+      <div class="lb-item ${rank<=3?'rank'+rank:''}">
+        <div class="rank-num">${rank<=3?['🥇','🥈','🥉'][rank-1]:rank}</div>
+        <img class="lb-avatar" src="${u.avatarUrl||''}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2238%22 height=%2238%22><rect fill=%22%231E2433%22 width=%2238%22 height=%2238%22 rx=%2219%22/><text x=%2219%22 y=%2225%22 text-anchor=%22middle%22 fill=%22%235A6380%22 font-size=%2218%22>${(u.displayName||u.username||'?')[0].toUpperCase()}</text></svg>'">
+        <div class="lb-info">
+          <div class="lb-name">${u.displayName||u.username} <span style="font-size:12px">${ms.icon}</span></div>
+          <div class="lb-badges">${badges.join('')}</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:${pct}%"></div></div>
+        </div>
+        <div class="lb-score">
+          <div class="score-val">${u.score}</div>
+          <div class="score-label">pts</div>
+        </div>
+      </div>`;
+  }).join('');
+}
 
-  // Clean URL so code doesn't linger in address bar
-  window.history.replaceState({}, document.title, window.location.pathname);
+function addChatMessage(sender, message) {
+  const feed = document.getElementById('chat-feed');
+  const empties = feed.querySelectorAll('.empty');
+  empties.forEach(e => e.remove());
+  const role = sender.roles?.includes('moderator') ? 'moderator' : sender.isOwner ? 'owner' : sender.isSubscriber ? 'subscriber' : sender.roles?.includes('vip') ? 'vip' : sender.roles?.includes('og') ? 'og' : '';
+  const div = document.createElement('div');
+  div.className = 'chat-msg';
+  div.innerHTML = `<span class="chat-sender ${role}">${sender.displayName||sender.username}</span><span class="chat-text">${escHtml(message)}</span>`;
+  feed.appendChild(div);
+  feed.scrollTop = feed.scrollHeight;
+}
 
-  try {
-    const res = await fetch('https://blaze.stream/bapi/oauth2/token', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'accept': 'application/json' },
-      body: JSON.stringify({
-        clientId: CLIENT_ID(),
-        clientSecret: CLIENT_SECRET(),
-        code,
-        codeVerifier: codeVerifier || '',
-        redirectUri,
-        grantType: 'authorization_code'
-      })
-    });
-    const data = await res.json();
-    if (data.accessToken) {
-      document.getElementById('accessToken').value = data.accessToken;
-      updateTokenStatus();
-      if (data.refreshToken) {
-        sessionStorage.setItem('blaze_refresh', data.refreshToken);
-        document.getElementById('refresh-token-input') && (document.getElementById('refresh-token-input').value = data.refreshToken);
-      }
-      sessionStorage.removeItem('blaze_state');
-      sessionStorage.removeItem('blaze_verifier');
-      // Fetch user profile and show in header
-      fetchAndShowUser(data.accessToken, data.userId);
-      msg.innerHTML = `✅ <b>User Token received!</b> Scopes: ${(data.scopes||[]).join(', ')} — token auto-filled above. You can now run user-scoped endpoints.`;
-      setTimeout(() => { banner.style.display = 'none'; }, 8000);
-    } else {
-      msg.innerHTML = `❌ Token exchange failed: ${escapeHtml(JSON.stringify(data))}`;
-    }
-  } catch(e) {
-    msg.innerHTML = `❌ Error: ${e.message}`;
+function addBotChatMessage(message) {
+  const feed = document.getElementById('chat-feed');
+  const div = document.createElement('div');
+  div.className = 'chat-bot-msg';
+  div.innerHTML = `<span class="chat-bot-sender">⚡ Bot</span> <span style="color:var(--muted2)">${escHtml(message)}</span>`;
+  feed.appendChild(div);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function pushAlert(type, html, icon) {
+  const feed = document.getElementById('alert-feed');
+  const empties = feed.querySelectorAll('.empty');
+  empties.forEach(e => e.remove());
+  const div = document.createElement('div');
+  div.className = `alert-item ${type}`;
+  div.innerHTML = `<div class="alert-icon">${icon}</div><div class="alert-body"><div class="alert-msg">${html}</div><div class="alert-time">${new Date().toLocaleTimeString()}</div></div>`;
+  feed.insertBefore(div, feed.firstChild);
+  // Trim to 100
+  while (feed.children.length > 100) feed.removeChild(feed.lastChild);
+}
+
+function toast(msg, big=false) {
+  const container = document.getElementById('toast');
+  const div = document.createElement('div');
+  div.className = 'toast-item' + (big ? ' milestone' : '');
+  div.textContent = msg;
+  container.appendChild(div);
+  setTimeout(() => div.remove(), big ? 5000 : 3000);
+}
+
+function setConnStatus(s) {
+  const el = document.getElementById('conn-status');
+  el.className = 'conn-status ' + s;
+  el.textContent = s === 'connected' ? 'Live' : s === 'connecting' ? 'Connecting…' : 'Disconnected';
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['leaderboard','alerts','milestones'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===name ? 'block' : 'none';
+  });
+}
+
+function clearAlerts() { document.getElementById('alert-feed').innerHTML = '<div class="empty"><div class="empty-icon">📡</div><div class="empty-text">Cleared.</div></div>'; }
+function clearChat() { document.getElementById('chat-feed').innerHTML = '<div class="empty"><div class="empty-icon">💬</div><div class="empty-text">Cleared.</div></div>'; }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── RESTORE SESSION ──
+function restoreSession() {
+  const t = sessionStorage.getItem('bc_token');
+  const ch = sessionStorage.getItem('bc_channel');
+  if (t) {
+    accessToken = t;
+    if (ch) { channelId = ch; document.getElementById('channel-id-input').value = ch; }
+    loadUserProfile();
+    document.getElementById('setup-overlay').style.display = 'none';
   }
 }
 
-async function fetchAndShowUser(token, userId) {
-  try {
-    const res = await fetch('https://api.blaze.stream/v1/users/profile', {
-      headers: {
-        'client-id': CLIENT_ID(),
-        'authorization': `Bearer ${token}`,
-        'content-type': 'application/json'
-      }
-    });
-    const data = await res.json();
-    const user = data.data || data;
-    if (user && (user.username || user.displayName)) {
-      const area = document.getElementById('header-auth-area');
-      area.innerHTML = `
-        <div class="user-card">
-          ${user.avatarUrl ? `<img src="${user.avatarUrl}" onerror="this.style.display='none'">` : ''}
-          <div>
-            <div class="uname">${user.displayName || user.username}</div>
-            <div class="utype">User Token ✓</div>
-          </div>
-          <button class="logout-btn" onclick="logoutBlaze()">Logout</button>
-        </div>`;
-    }
-  } catch(e) { /* silent */ }
-}
-
-function logoutBlaze() {
-  document.getElementById('accessToken').value = '';
-  updateTokenStatus();
-  sessionStorage.removeItem('blaze_refresh');
-  document.getElementById('header-auth-area').innerHTML = `<button class="login-blaze-btn" onclick="startBlazeLogin()">⚡ Login with Blaze</button>`;
-}
-
-// ── Manual code exchange (fallback) ──
-async function exchangeCodeManual() {
-  const el = document.getElementById('manual-exchange-result');
-  const code = document.getElementById('oauth-code').value.trim();
-  const redirectUri = document.getElementById('oauth-redirect').value.trim();
-  const codeVerifier = sessionStorage.getItem('blaze_verifier') || '';
-  if (!code) { el.innerHTML = '<div style="color:var(--red)">Paste the authorization code first</div>'; return; }
-  el.innerHTML = '<div style="color:var(--muted)">Exchanging…</div>';
-  try {
-    const res = await fetch('https://blaze.stream/bapi/oauth2/token', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ clientId: CLIENT_ID(), clientSecret: CLIENT_SECRET(), code, codeVerifier, redirectUri, grantType: 'authorization_code' })
-    });
-    const data = await res.json();
-    if (data.accessToken) {
-      document.getElementById('accessToken').value = data.accessToken;
-      updateTokenStatus();
-      if (data.refreshToken) document.getElementById('refresh-token-input').value = data.refreshToken;
-      fetchAndShowUser(data.accessToken);
-    }
-    el.innerHTML = `<pre>${escapeHtml(JSON.stringify(data,null,2))}</pre>`;
-  } catch(e) { el.innerHTML = `<div style="color:var(--red)">${e.message}</div>`; }
-}
-
-async function refreshToken() {
-  const el = document.getElementById('refresh-result');
-  const rt = document.getElementById('refresh-token-input').value.trim() || sessionStorage.getItem('blaze_refresh') || '';
-  if (!rt) { el.innerHTML = '<div style="color:var(--red)">No refresh token found</div>'; return; }
-  el.innerHTML = '<div style="color:var(--muted)">Refreshing…</div>';
-  try {
-    const res = await fetch('https://blaze.stream/bapi/oauth2/refresh', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ clientId: CLIENT_ID(), clientSecret: CLIENT_SECRET(), refreshToken: rt })
-    });
-    const data = await res.json();
-    if (data.accessToken) {
-      document.getElementById('accessToken').value = data.accessToken;
-      updateTokenStatus();
-      if (data.refreshToken) { sessionStorage.setItem('blaze_refresh', data.refreshToken); document.getElementById('refresh-token-input').value = data.refreshToken; }
-    }
-    el.innerHTML = `<pre>${escapeHtml(JSON.stringify(data,null,2))}</pre>`;
-  } catch(e) { el.innerHTML = `<div style="color:var(--red)">${e.message}</div>`; }
-}
-
-// Run callback check on load
-handleOAuthCallback();
-
-// ── Endpoint Configs ──
-const ENDPOINTS = {
-  'list-channels': {
-    title: 'List Channels',
-    desc: 'Returns channels with cursor pagination. Filter by slug, category, or live status.',
-    method: 'GET', path: '/channels',
-    fields: [
-      { key: 'slug', label: 'Slug (optional)', placeholder: 'lasvegasape' },
-      { key: 'categoryId', label: 'Category ID (optional)', placeholder: '36018' },
-      { key: 'type', label: 'Type', type: 'select', options: [{v:'',l:'All'},{v:'live',l:'Live Only'},{v:'all',l:'Live + Offline'}] },
-      { key: 'limit', label: 'Limit', default: '20' }
-    ],
-    queryParams: g => ({ 'slug[]': g('slug'), 'categoryId[]': g('categoryId'), type: g('type'), limit: g('limit') })
-  },
-  'channel-stats': {
-    title: 'Channel Stats',
-    desc: 'Returns follower, subscriber, and viewer counts.',
-    method: 'GET', path: '/channels/stats',
-    fields: [{ key: 'channelId', label: 'Channel ID (App Token only, optional)', placeholder: 'UUID' }],
-    queryParams: g => ({ channelId: g('channelId') })
-  },
-  'live-stats': {
-    title: 'Live Stats',
-    desc: 'Returns live session counters: viewers, new followers, new subs.',
-    method: 'GET', path: '/channels/live-stats',
-    fields: [{ key: 'channelId', label: 'Channel ID (App Token only, optional)', placeholder: 'UUID' }],
-    queryParams: g => ({ channelId: g('channelId') })
-  },
-  'channel-followers': {
-    title: 'List Followers',
-    desc: 'Cursor-paginated followers for the authorized channel. Requires User Access Token.',
-    method: 'GET', path: '/channels/followers',
-    fields: [{ key: 'limit', label: 'Limit', default: '20' }, { key: 'cursor', label: 'Cursor', placeholder: 'pagination cursor' }],
-    queryParams: g => ({ limit: g('limit'), cursor: g('cursor') })
-  },
-  'followed-channels': {
-    title: 'Followed Channels',
-    desc: 'Returns channels the authorized user follows.',
-    method: 'GET', path: '/channels/followed',
-    fields: [{ key: 'limit', label: 'Limit', default: '20' }],
-    queryParams: g => ({ limit: g('limit') })
-  },
-  'subscribers': {
-    title: 'List Subscribers',
-    desc: 'Active subscribers for the authorized channel.',
-    method: 'GET', path: '/channels/subscribers',
-    fields: [{ key: 'limit', label: 'Limit', default: '20' }],
-    queryParams: g => ({ limit: g('limit') })
-  },
-  'activities': {
-    title: 'Recent Activities',
-    desc: 'Activity feed: followers, subs, gifts, thanks, votes.',
-    method: 'GET', path: '/channels/activities',
-    fields: [
-      { key: 'limit', label: 'Limit', default: '20' },
-      { key: 'type', label: 'Filter Type', placeholder: 'follow / subscribe / gift…' }
-    ],
-    queryParams: g => ({ limit: g('limit'), type: g('type') })
-  },
-  'clips': {
-    title: 'Channel Clips',
-    desc: 'Paginated clips for a target channel.',
-    method: 'GET', path: '/channels/clips',
-    fields: [
-      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
-      { key: 'limit', label: 'Limit', default: '20' },
-      { key: 'orderBy', label: 'Order By', type: 'select', options: [{v:'most_viewed',l:'Most Viewed'},{v:'most_recent',l:'Most Recent'}] }
-    ],
-    queryParams: g => ({ channelId: g('channelId'), limit: g('limit'), orderBy: g('orderBy') })
-  },
-  'vods': {
-    title: 'Channel VODs',
-    desc: 'Paginated VODs for a target channel.',
-    method: 'GET', path: '/channels/vods',
-    fields: [
-      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
-      { key: 'limit', label: 'Limit', default: '20' },
-      { key: 'orderBy', label: 'Order By', type: 'select', options: [{v:'most_recent',l:'Most Recent'},{v:'most_viewed',l:'Most Viewed'}] }
-    ],
-    queryParams: g => ({ channelId: g('channelId'), limit: g('limit'), orderBy: g('orderBy') })
-  },
-  'vips': {
-    title: 'List VIP Users',
-    desc: 'Returns VIP role users for the authorized channel.',
-    method: 'GET', path: '/channels/roles/vips',
-    fields: [{ key: 'channelId', label: 'Channel ID (App Token)', placeholder: 'UUID' }],
-    queryParams: g => ({ channelId: g('channelId') })
-  },
-  'mods': {
-    title: 'List Mod Users',
-    desc: 'Returns moderator role users for the authorized channel.',
-    method: 'GET', path: '/channels/roles/mods',
-    fields: [{ key: 'channelId', label: 'Channel ID (App Token)', placeholder: 'UUID' }],
-    queryParams: g => ({ channelId: g('channelId') })
-  },
-  'ogs': {
-    title: 'List OG Users',
-    desc: 'Returns OG role users for the authorized channel.',
-    method: 'GET', path: '/channels/roles/ogs',
-    fields: [{ key: 'channelId', label: 'Channel ID (App Token)', placeholder: 'UUID' }],
-    queryParams: g => ({ channelId: g('channelId') })
-  },
-  'banned-users': {
-    title: 'List Banned Users',
-    desc: 'Returns banned users and the mod that applied each ban.',
-    method: 'GET', path: '/channels/banned-users',
-    fields: [{ key: 'limit', label: 'Limit', default: '20' }],
-    queryParams: g => ({ limit: g('limit') })
-  },
-  'update-channel': {
-    title: 'Update Channel Info',
-    desc: 'Update channel title, language, and optional category. Requires User Access Token + channel.moderate scope.',
-    method: 'POST', path: '/channels/info',
-    fields: [
-      { key: 'title', label: 'Title', required: true, placeholder: 'Stream title' },
-      { key: 'lang', label: 'Language', default: 'en', placeholder: 'en' },
-      { key: 'categoryId', label: 'Category ID (optional)', placeholder: '12' }
-    ],
-    body: g => ({ title: g('title'), lang: g('lang'), ...(g('categoryId') && { categoryId: parseInt(g('categoryId')) }) })
-  },
-  'add-vip': {
-    title: 'Add VIP User',
-    desc: 'Add a user to the VIP role. channelId must match your token user UUID.',
-    method: 'POST', path: '/channels/vips',
-    fields: [
-      { key: 'channelId', label: 'Channel ID (your UUID)', required: true, placeholder: 'UUID' },
-      { key: 'userId', label: 'User ID to add', required: true, placeholder: 'UUID' }
-    ],
-    body: g => ({ channelId: g('channelId'), userId: g('userId') })
-  },
-  'remove-vip': {
-    title: 'Remove VIP User',
-    desc: 'Remove a user from the VIP role.',
-    method: 'DELETE', path: '/channels/vips',
-    fields: [
-      { key: 'channelId', label: 'Channel ID (your UUID)', required: true, placeholder: 'UUID' },
-      { key: 'userId', label: 'User ID to remove', required: true, placeholder: 'UUID' }
-    ],
-    body: g => ({ channelId: g('channelId'), userId: g('userId') })
-  },
-  'add-og': {
-    title: 'Add OG User',
-    desc: 'Add a user to the OG role.',
-    method: 'POST', path: '/channels/ogs',
-    fields: [
-      { key: 'channelId', label: 'Channel ID (your UUID)', required: true, placeholder: 'UUID' },
-      { key: 'userId', label: 'User ID to add', required: true, placeholder: 'UUID' }
-    ],
-    body: g => ({ channelId: g('channelId'), userId: g('userId') })
-  },
-  'remove-og': {
-    title: 'Remove OG User',
-    desc: 'Remove a user from the OG role.',
-    method: 'DELETE', path: '/channels/ogs',
-    fields: [
-      { key: 'channelId', label: 'Channel ID (your UUID)', required: true, placeholder: 'UUID' },
-      { key: 'userId', label: 'User ID to remove', required: true, placeholder: 'UUID' }
-    ],
-    body: g => ({ channelId: g('channelId'), userId: g('userId') })
-  },
-  'user-profile': {
-    title: 'Get User Profile',
-    desc: 'Returns profile data for the authorized user (or a target via userId/username with App Token).',
-    method: 'GET', path: '/users/profile',
-    fields: [
-      { key: 'userId', label: 'User ID (App Token, optional)', placeholder: 'UUID' },
-      { key: 'username', label: 'Username (App Token, optional)', placeholder: 'creator' }
-    ],
-    queryParams: g => ({ userId: g('userId'), username: g('username') })
-  },
-  'achievement-stats': {
-    title: 'Achievement Stats',
-    desc: 'Creator tier, follower count, stream hours, and unique chatters.',
-    method: 'GET', path: '/users/achievement-stats',
-    fields: [{ key: 'userId', label: 'User ID (App Token, optional)', placeholder: 'UUID' }],
-    queryParams: g => ({ userId: g('userId') })
-  },
-  'user-subscriptions': {
-    title: 'User Subscriptions',
-    desc: 'Active, gifted, and expired subscriptions for the authorized user.',
-    method: 'GET', path: '/users/subscriptions',
-    fields: []
-  },
-  'update-bio': {
-    title: 'Update Bio',
-    desc: 'Update the authorized user\'s public bio (max 300 chars). Requires channel.moderate scope.',
-    method: 'POST', path: '/users/profile/bio',
-    fields: [{ key: 'bio', label: 'Bio', required: true, placeholder: 'Your bio here…' }],
-    body: g => ({ bio: g('bio') })
-  },
-  'chat-messages': {
-    title: 'Get Chat Messages',
-    desc: 'Fetch recent chat messages for a channel.',
-    method: 'GET', path: '/chats/messages',
-    fields: [
-      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
-      { key: 'limit', label: 'Limit', default: '20' }
-    ],
-    queryParams: g => ({ channelId: g('channelId'), limit: g('limit') })
-  },
-  'send-chat': {
-    title: 'Send Chat Message',
-    desc: 'Send a message to a channel chat. Requires User Access Token.',
-    method: 'POST', path: '/chats/messages',
-    fields: [
-      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
-      { key: 'message', label: 'Message', required: true, placeholder: 'Hello chat!' }
-    ],
-    body: g => ({ channelId: g('channelId'), message: g('message') })
-  },
-  'list-categories': {
-    title: 'List Categories',
-    desc: 'Paginated stream category catalog with slugs and images.',
-    method: 'GET', path: '/categories',
-    fields: [
-      { key: 'term', label: 'Search Term', placeholder: 'just chatting' },
-      { key: 'limit', label: 'Limit (max 200)', default: '20' }
-    ],
-    queryParams: g => ({ term: g('term'), limit: g('limit') })
-  },
-  'ban-user': {
-    title: 'Ban User',
-    desc: 'Permanently ban a user from your channel. Requires channel.moderate scope.',
-    method: 'POST', path: '/moderation/bans',
-    fields: [
-      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
-      { key: 'userId', label: 'User ID to ban', required: true, placeholder: 'UUID' }
-    ],
-    body: g => ({ channelId: g('channelId'), userId: g('userId') })
-  },
-  'unban-user': {
-    title: 'Unban User',
-    desc: 'Remove a ban from a user in your channel.',
-    method: 'DELETE', path: '/moderation/bans',
-    fields: [
-      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
-      { key: 'userId', label: 'User ID to unban', required: true, placeholder: 'UUID' }
-    ],
-    body: g => ({ channelId: g('channelId'), userId: g('userId') })
-  },
-  'mute-user': {
-    title: 'Mute User',
-    desc: 'Temporarily mute a user in your channel. Requires channel.moderate scope.',
-    method: 'POST', path: '/moderation/mutes',
-    fields: [
-      { key: 'channelId', label: 'Channel ID', required: true, placeholder: 'UUID' },
-      { key: 'userId', label: 'User ID to mute', required: true, placeholder: 'UUID' },
-      { key: 'duration', label: 'Duration (seconds)', placeholder: '300', default: '300' }
-    ],
-    body: g => ({ channelId: g('channelId'), userId: g('userId'), duration: parseInt(g('duration')) || 300 })
-  }
-};
+// ── INIT ──
+restoreSession();
+handleCallback();
 </script>
 </body>
 </html>
