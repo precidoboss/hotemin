@@ -35,6 +35,74 @@ const MILESTONES = [
 // sockets[channelId] = { socket, sessionId, connected, reconnectTimer }
 const sockets = {};
 
+// ── MINI-GAMES: IN-MEMORY GAME STATE ──
+// games[channelId] = { trivia, scramble, raffle, duels: { challengerUsername: {...} } }
+const games = {};
+function getGame(channelId) {
+  if (!games[channelId]) games[channelId] = { trivia: null, scramble: null, raffle: null, duels: {} };
+  return games[channelId];
+}
+
+const TRIVIA_QUESTIONS = [
+  { q: 'What does "L1" stand for in blockchain terms?', a: 'layer 1' },
+  { q: 'What consensus family does Avalanche use?', a: 'snowman' },
+  { q: 'What ERC standard supports multiple token types in one contract?', a: 'erc-1155' },
+  { q: 'What do you call a sudden viewer influx from another channel?', a: 'raid' },
+  { q: 'What 3-letter acronym means "decentralized finance"?', a: 'defi' },
+  { q: 'What\'s the term for locking tokens to earn rewards over time?', a: 'staking' },
+  { q: 'In commit-reveal randomness, what is committed first?', a: 'hash' },
+  { q: 'What JS library (v6) powers most Ethereum dApp wallet calls?', a: 'ethers' },
+  { q: 'What\'s a contract holding funds until conditions are met called?', a: 'escrow' },
+  { q: 'What does NFT stand for?', a: 'non-fungible token' },
+];
+
+const SCRAMBLE_WORDS = [
+  'BLAZE', 'STREAM', 'LOYALTY', 'DEVOTED', 'GROTTO', 'COMPANION',
+  'LEGEND', 'FANATIC', 'GAUNTLET', 'WALLET', 'MILESTONE', 'CHANNEL',
+];
+
+function scrambleWord(word) {
+  let arr = word.split('');
+  do {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  } while (arr.join('') === word);
+  return arr.join('');
+}
+
+function rollReel() {
+  const reels = ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣'];
+  return reels[Math.floor(Math.random() * reels.length)];
+}
+
+const SLOT_PAYOUTS = { '💎💎💎': 10, '7️⃣7️⃣7️⃣': 8, '⭐⭐⭐': 5, '🔔🔔🔔': 4, '🍋🍋🍋': 3, '🍒🍒🍒': 2 };
+
+// Generic score adjustment for games (read-modify-write, mirrors upsertLoyalty's milestone logic)
+async function adjustScore(channelId, username, delta) {
+  const { data: u } = await supabase
+    .from('loyalty').select('*')
+    .eq('channel_id', channelId).eq('username', username).single();
+  if (!u) return null;
+  const prevMs   = getMilestone(u.score);
+  const newScore = Math.max(0, u.score + delta);
+  const newMs    = getMilestone(newScore);
+  await supabase.from('loyalty')
+    .update({ score: newScore, milestone: newMs.name })
+    .eq('channel_id', channelId).eq('user_id', u.user_id);
+  if (newMs.pts > prevMs.pts) {
+    await pushAlert(channelId, 'milestone', `${u.display_name || u.username} reached ${newMs.icon} ${newMs.name}!`, '🏆');
+  }
+  return newScore;
+}
+
+async function getScore(channelId, username) {
+  const { data: u } = await supabase
+    .from('loyalty').select('score').eq('channel_id', channelId).eq('username', username).single();
+  return u?.score ?? null;
+}
+
 // ── HELPERS ──
 function getMilestone(score) {
   let m = MILESTONES[0];
@@ -232,6 +300,214 @@ async function handleCommand(channelId, token, message, sender) {
       await say(`⚡ Blaze Companion running for ${mins} min. Tracking ${count || 0} members — data saved forever in Supabase!`);
       break;
     }
+
+    // ══════════════════ MINI-GAMES ══════════════════
+
+    case '!trivia': {
+      const game = getGame(channelId);
+      if (game.trivia) { await say(`❓ Trivia already running: "${game.trivia.q}" — answer with !answer <text>`); return; }
+      const pick = TRIVIA_QUESTIONS[Math.floor(Math.random() * TRIVIA_QUESTIONS.length)];
+      game.trivia = { q: pick.q, a: pick.a.toLowerCase(), startedAt: Date.now() };
+      setTimeout(() => {
+        if (game.trivia && game.trivia.q === pick.q) {
+          say(`⏰ Trivia time's up! Answer was: "${pick.a}". Try !trivia again!`);
+          game.trivia = null;
+        }
+      }, 45000);
+      await say(`🧠 TRIVIA (45s)! ${pick.q} — answer with !answer <your answer> (+25 pts)`);
+      break;
+    }
+
+    case '!answer': {
+      const game = getGame(channelId);
+      const guess = arg.toLowerCase();
+      if (game.trivia) {
+        if (guess === game.trivia.a || guess.includes(game.trivia.a)) {
+          game.trivia = null;
+          await adjustScore(channelId, sender.username, 25);
+          await say(`🎉 Correct, @${sender.username}! +25 pts! 🧠⚡`);
+        } else {
+          await say(`❌ Nope, try again @${sender.username}!`);
+        }
+        return;
+      }
+      if (game.scramble) {
+        if (guess === game.scramble.word.toLowerCase()) {
+          game.scramble = null;
+          await adjustScore(channelId, sender.username, 20);
+          await say(`🎉 Unscrambled it, @${sender.username}! +20 pts! 🔤⚡`);
+        } else {
+          await say(`❌ Not quite, @${sender.username} — keep trying!`);
+        }
+        return;
+      }
+      await say('No active trivia or scramble right now. Try !trivia or !scramble!');
+      break;
+    }
+
+    case '!scramble': {
+      const game = getGame(channelId);
+      if (game.scramble) { await say(`🔤 Scramble already running: ${game.scramble.scrambled} — answer with !answer <word>`); return; }
+      const word = SCRAMBLE_WORDS[Math.floor(Math.random() * SCRAMBLE_WORDS.length)];
+      const scrambled = scrambleWord(word);
+      game.scramble = { word, scrambled, startedAt: Date.now() };
+      setTimeout(() => {
+        if (game.scramble && game.scramble.word === word) {
+          say(`⏰ Scramble time's up! It was: "${word}". Try !scramble again!`);
+          game.scramble = null;
+        }
+      }, 45000);
+      await say(`🔤 UNSCRAMBLE (45s): "${scrambled}" — answer with !answer <word> (+20 pts)`);
+      break;
+    }
+
+    case '!slots': {
+      const wager = parseInt(arg, 10);
+      if (!wager || wager < 5) { await say('Usage: !slots <amount> (min 5 pts)'); return; }
+      const score = await getScore(channelId, sender.username);
+      if (score === null) { await say(`@${sender.username}, chat a bit first so I can track you!`); return; }
+      if (score < wager) { await say(`@${sender.username}, you only have ${score} pts — can't wager ${wager}.`); return; }
+      const spin = [rollReel(), rollReel(), rollReel()];
+      const combo = spin.join('');
+      const mult = SLOT_PAYOUTS[combo] || (spin[0] === spin[1] || spin[1] === spin[2] || spin[0] === spin[2] ? 1.5 : 0);
+      const delta = mult > 0 ? Math.round(wager * mult) - wager : -wager;
+      const newScore = await adjustScore(channelId, sender.username, delta);
+      if (mult > 0) {
+        await say(`🎰 ${spin.join(' ')} — JACKPOT-ish! @${sender.username} wins ${Math.round(wager*mult)} pts! (now ${newScore})`);
+      } else {
+        await say(`🎰 ${spin.join(' ')} — no match. @${sender.username} loses ${wager} pts. (now ${newScore})`);
+      }
+      break;
+    }
+
+    case '!coinflip': {
+      const fParts = arg.split(/\s+/);
+      const wager  = parseInt(fParts[0], 10);
+      const call   = (fParts[1] || '').toLowerCase();
+      if (!wager || wager < 5 || !['heads','tails'].includes(call)) { await say('Usage: !coinflip <amount> <heads|tails>'); return; }
+      const score = await getScore(channelId, sender.username);
+      if (score === null || score < wager) { await say(`@${sender.username}, you need ${wager} pts to flip (have ${score ?? 0}).`); return; }
+      const result = Math.random() < 0.5 ? 'heads' : 'tails';
+      const win = result === call;
+      const newScore = await adjustScore(channelId, sender.username, win ? wager : -wager);
+      await say(`🪙 It's ${result.toUpperCase()}! @${sender.username} ${win ? `WINS +${wager} pts` : `loses ${wager} pts`} (now ${newScore})`);
+      break;
+    }
+
+    case '!rps': {
+      const rParts = arg.split(/\s+/);
+      const wager  = parseInt(rParts[0], 10);
+      const choice = (rParts[1] || '').toLowerCase();
+      const moves  = ['rock', 'paper', 'scissors'];
+      if (!wager || wager < 5 || !moves.includes(choice)) { await say('Usage: !rps <amount> <rock|paper|scissors>'); return; }
+      const score = await getScore(channelId, sender.username);
+      if (score === null || score < wager) { await say(`@${sender.username}, you need ${wager} pts to play.`); return; }
+      const bot = moves[Math.floor(Math.random() * 3)];
+      let outcome = 'tie';
+      if ((choice === 'rock' && bot === 'scissors') || (choice === 'paper' && bot === 'rock') || (choice === 'scissors' && bot === 'paper')) outcome = 'win';
+      else if (choice !== bot) outcome = 'lose';
+      const delta = outcome === 'win' ? wager : outcome === 'lose' ? -wager : 0;
+      const newScore = await adjustScore(channelId, sender.username, delta) ?? score;
+      const verb = outcome === 'win' ? `WINS +${wager} pts` : outcome === 'lose' ? `loses ${wager} pts` : 'ties — pts unchanged';
+      await say(`✊✋✌️ Bot played ${bot}! @${sender.username} ${verb} (now ${newScore})`);
+      break;
+    }
+
+    case '!duel': {
+      const dParts = arg.split(/\s+/);
+      const target = (dParts[0] || '').replace('@', '');
+      const wager  = parseInt(dParts[1], 10);
+      if (!target || !wager || wager < 10) { await say('Usage: !duel @user <amount> (min 10 pts)'); return; }
+      if (target.toLowerCase() === sender.username.toLowerCase()) { await say("You can't duel yourself!"); return; }
+      const score = await getScore(channelId, sender.username);
+      if (score === null || score < wager) { await say(`@${sender.username}, you need ${wager} pts to duel.`); return; }
+      const game = getGame(channelId);
+      game.duels[target.toLowerCase()] = { challenger: sender.username, wager, expires: Date.now() + 60000 };
+      setTimeout(() => {
+        if (game.duels[target.toLowerCase()]?.expires <= Date.now()) delete game.duels[target.toLowerCase()];
+      }, 60000);
+      await say(`⚔️ @${sender.username} challenges @${target} to a ${wager}-pt duel! @${target}, type !accept within 60s!`);
+      break;
+    }
+
+    case '!accept': {
+      const game = getGame(channelId);
+      const pending = game.duels[sender.username.toLowerCase()];
+      if (!pending || pending.expires < Date.now()) { await say(`No pending duel for @${sender.username}.`); return; }
+      const myScore = await getScore(channelId, sender.username);
+      if (myScore === null || myScore < pending.wager) { await say(`@${sender.username}, you need ${pending.wager} pts to accept.`); return; }
+      delete game.duels[sender.username.toLowerCase()];
+      const challengerWins = Math.random() < 0.5;
+      const winner = challengerWins ? pending.challenger : sender.username;
+      const loser  = challengerWins ? sender.username : pending.challenger;
+      await adjustScore(channelId, winner, pending.wager);
+      await adjustScore(channelId, loser, -pending.wager);
+      await say(`⚔️ DUEL RESULT: @${winner} defeats @${loser} and takes ${pending.wager} pts! 🏆`);
+      break;
+    }
+
+    case '!raffle': {
+      const sub = (parts[1] || '').toLowerCase();
+      const game = getGame(channelId);
+      if (sub === 'start') {
+        const prize = parts.slice(2).join(' ') || 'a surprise prize';
+        game.raffle = { prize, entries: new Set(), startedAt: Date.now() };
+        await say(`🎟️ RAFFLE STARTED for ${prize}! Type !raffle join to enter. Mods end it with !raffle draw.`);
+      } else if (sub === 'join') {
+        if (!game.raffle) { await say('No raffle running right now.'); return; }
+        game.raffle.entries.add(sender.username);
+        await say(`🎟️ @${sender.username} entered the raffle! (${game.raffle.entries.size} entered)`);
+      } else if (sub === 'draw') {
+        if (!game.raffle || game.raffle.entries.size === 0) { await say('No raffle entries to draw from.'); return; }
+        const entries = [...game.raffle.entries];
+        const winner = entries[Math.floor(Math.random() * entries.length)];
+        await adjustScore(channelId, winner, 50);
+        await say(`🎉 RAFFLE WINNER: @${winner} takes ${game.raffle.prize}! (+50 bonus pts) 🎟️`);
+        game.raffle = null;
+      } else if (sub === 'cancel') {
+        game.raffle = null;
+        await say('🎟️ Raffle cancelled.');
+      } else {
+        await say('Usage: !raffle start <prize> | !raffle join | !raffle draw | !raffle cancel');
+      }
+      break;
+    }
+
+    case '!daily': {
+      const { data: u } = await supabase
+        .from('loyalty').select('*').eq('channel_id', channelId).eq('username', sender.username).single();
+      if (!u) { await say(`@${sender.username}, chat a bit first so I can track you!`); return; }
+      const last = u.last_daily ? new Date(u.last_daily).getTime() : 0;
+      if (Date.now() - last < 20 * 60 * 60 * 1000) {
+        const hrsLeft = Math.ceil((20 * 60 * 60 * 1000 - (Date.now() - last)) / 3600000);
+        await say(`⏳ @${sender.username}, you already claimed today. Try again in ~${hrsLeft}h.`);
+        return;
+      }
+      const bonus = 15 + Math.floor(Math.random() * 20); // 15-34 bonus pts
+      await supabase.from('loyalty').update({ last_daily: new Date().toISOString() }).eq('channel_id', channelId).eq('user_id', u.user_id);
+      const newScore = await adjustScore(channelId, sender.username, bonus);
+      await say(`🎁 Daily bonus claimed! @${sender.username} +${bonus} pts (now ${newScore}). Come back tomorrow!`);
+      break;
+    }
+
+    case '!8ball': {
+      if (!arg) { await say('Usage: !8ball <question>'); return; }
+      const replies = ['Yes, definitely! ✅', 'No way. ❌', 'Ask again later... 🔮', 'Absolutely! ⚡', 'Highly doubtful. 🤔', 'The streams say yes. 🌊', 'Not looking good. 🌧️'];
+      await say(`🎱 ${replies[Math.floor(Math.random() * replies.length)]}`);
+      break;
+    }
+
+    case '!roll': {
+      const max = Math.max(2, parseInt(arg, 10) || 100);
+      const roll = 1 + Math.floor(Math.random() * max);
+      await say(`🎲 @${sender.username} rolled ${roll} (out of ${max})`);
+      break;
+    }
+
+    case '!games': {
+      await say('🎮 Games: !trivia | !scramble | !answer | !slots <amt> | !coinflip <amt> <heads/tails> | !rps <amt> <rock/paper/scissors> | !duel @user <amt> | !accept | !raffle | !daily | !8ball | !roll');
+      break;
+    }
   }
 }
 
@@ -425,6 +701,19 @@ app.post('/api/reset', async (req, res) => {
   await supabase.from('loyalty').delete().eq('channel_id', channelId);
   await supabase.from('alerts').delete().eq('channel_id', channelId);
   res.json({ ok: true });
+});
+
+// Active mini-game state for dashboard
+app.get('/api/games', (req, res) => {
+  const { channelId } = req.query;
+  if (!channelId) return res.status(400).json({ error: 'channelId required' });
+  const game = getGame(channelId);
+  res.json({
+    trivia:   game.trivia ? { question: game.trivia.q } : null,
+    scramble: game.scramble ? { scrambled: game.scramble.scrambled } : null,
+    raffle:   game.raffle ? { prize: game.raffle.prize, entries: game.raffle.entries.size } : null,
+    activeDuels: Object.keys(game.duels).length,
+  });
 });
 
 // List all channels
