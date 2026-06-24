@@ -1,7 +1,8 @@
-const express = require('express');
-const cors    = require('cors');
-const { io }  = require('socket.io-client');
-const fetch   = require('node-fetch');
+const express    = require('express');
+const cors       = require('cors');
+const { io }     = require('socket.io-client');
+const fetch      = require('node-fetch');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 app.use(cors());
@@ -12,6 +13,12 @@ const CLIENT_ID     = process.env.BLAZE_CLIENT_ID     || 'UR4ghwgTTJ2rAE1_KBZgmC
 const CLIENT_SECRET = process.env.BLAZE_CLIENT_SECRET || 'IFwFHaqzi_sA0FfJ9nWiQSR0ug3GPUWZMr0qw3LvMZ0';
 const API           = 'https://api.blaze.stream/v1';
 const startedAt     = Date.now();
+
+// Supabase — set these in Render env vars
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY  // use service role key (bypasses RLS)
+);
 
 // ── SCORING ──
 const SCORES     = { msg: 1, follow: 10, sub: 50, gift: 30, vote: 5 };
@@ -24,26 +31,11 @@ const MILESTONES = [
   { pts: 2000, name: 'Legend',  icon: '👑' },
 ];
 
-// ── MULTI-CHANNEL STORE ──
-// channels[channelId] = { token, socket, sessionId, connected, reconnectTimer,
-//                         loyalty, stats, alerts }
-const channels = {};
+// ── IN-MEMORY CHANNEL SOCKETS ──
+// sockets[channelId] = { socket, sessionId, connected, reconnectTimer }
+const sockets = {};
 
-function makeChannelState(channelId, token) {
-  return {
-    channelId,
-    token,
-    socket: null,
-    sessionId: '',
-    connected: false,
-    reconnectTimer: null,
-    loyalty: {},
-    stats: { chatters: 0, msgs: 0, follows: 0, subs: 0, gifts: 0, votes: 0 },
-    alerts: [],
-  };
-}
-
-// ── HELPERS (per-channel) ──
+// ── HELPERS ──
 function getMilestone(score) {
   let m = MILESTONES[0];
   for (const ms of MILESTONES) { if (score >= ms.pts) m = ms; }
@@ -52,60 +44,6 @@ function getMilestone(score) {
 function getNextMilestone(score) {
   return MILESTONES.find(ms => score < ms.pts) || null;
 }
-function getTopUsers(ch, n) {
-  return Object.entries(ch.loyalty)
-    .sort((a, b) => b[1].score - a[1].score)
-    .slice(0, n)
-    .map(([id, u]) => ({ ...u, id }));
-}
-function findUser(ch, username) {
-  const un = username.toLowerCase().replace('@', '');
-  const entry = Object.entries(ch.loyalty).find(([, u]) => (u.username || '').toLowerCase() === un);
-  return entry ? { ...entry[1], id: entry[0] } : null;
-}
-function getRank(ch, uid) {
-  const sorted = Object.entries(ch.loyalty).sort((a, b) => b[1].score - a[1].score);
-  return sorted.findIndex(([id]) => id === uid) + 1;
-}
-function pushAlert(ch, type, message, icon) {
-  ch.alerts.unshift({ type, message, icon, time: new Date().toISOString() });
-  if (ch.alerts.length > 100) ch.alerts.pop();
-}
-
-function addScore(ch, uid, username, displayName, avatarUrl, type, amount = 1, meta = {}) {
-  if (!uid) return;
-  if (!ch.loyalty[uid]) {
-    ch.loyalty[uid] = {
-      username, displayName, avatarUrl,
-      score: 0, msgs: 0, follows: 0, subs: 0, gifts: 0, votes: 0,
-      isSubscriber: false, isFollower: false,
-      firstSeen: Date.now(), lastSeen: Date.now(),
-      milestone: MILESTONES[0]
-    };
-    ch.stats.chatters = Object.keys(ch.loyalty).length;
-  }
-  const u = ch.loyalty[uid];
-  u.username    = username    || u.username;
-  u.displayName = displayName || u.displayName;
-  u.avatarUrl   = avatarUrl   || u.avatarUrl;
-  u.lastSeen    = Date.now();
-  if (meta.isSubscriber !== undefined) u.isSubscriber = meta.isSubscriber;
-  if (meta.isFollower   !== undefined) u.isFollower   = meta.isFollower;
-
-  const prev  = getMilestone(u.score);
-  u.score    += SCORES[type] * amount;
-  const key   = type === 'msg' ? 'msgs' : type + 's';
-  u[key]      = (u[key] || 0) + amount;
-
-  const next = getMilestone(u.score);
-  if (next.pts > prev.pts) {
-    u.milestone = next;
-    pushAlert(ch, 'milestone', `${u.displayName || u.username} reached ${next.icon} ${next.name} (${u.score} pts)!`, '🏆');
-    sendChat(ch, `🏆 ${next.icon} @${u.username} just reached ${next.name} status with ${u.score} loyalty points! Congrats!`);
-  }
-}
-
-// ── BLAZE API ──
 function blazeHeaders(token) {
   return {
     'client-id': CLIENT_ID,
@@ -115,21 +53,79 @@ function blazeHeaders(token) {
   };
 }
 
-async function sendChat(ch, message) {
-  if (!ch.token || !ch.channelId) return;
-  try {
-    await fetch(`${API}/chats/messages`, {
-      method: 'POST',
-      headers: blazeHeaders(ch.token),
-      body: JSON.stringify({ channelId: ch.channelId, message })
-    });
-    console.log(`[${ch.channelId.slice(0,8)}] BOT: ${message}`);
-  } catch (e) {
-    console.error(`[${ch.channelId.slice(0,8)}] sendChat error:`, e.message);
+// ── SUPABASE HELPERS ──
+async function getChannelToken(channelId) {
+  const { data } = await supabase
+    .from('channels')
+    .select('token')
+    .eq('id', channelId)
+    .single();
+  return data?.token || null;
+}
+
+async function upsertLoyalty(channelId, uid, username, displayName, avatarUrl, type, amount, meta = {}) {
+  // Fetch current row
+  const { data: existing } = await supabase
+    .from('loyalty')
+    .select('*')
+    .eq('channel_id', channelId)
+    .eq('user_id', uid)
+    .single();
+
+  const pts    = SCORES[type] * amount;
+  const key    = type === 'msg' ? 'msgs' : type + 's';
+  const prev   = existing ? getMilestone(existing.score) : MILESTONES[0];
+  const score  = (existing?.score || 0) + pts;
+  const next   = getMilestone(score);
+
+  const row = {
+    channel_id:    channelId,
+    user_id:       uid,
+    username:      username      || existing?.username,
+    display_name:  displayName   || existing?.display_name,
+    avatar_url:    avatarUrl     || existing?.avatar_url,
+    score,
+    [key]:         (existing?.[key] || 0) + amount,
+    is_subscriber: meta.isSubscriber ?? existing?.is_subscriber ?? false,
+    is_follower:   meta.isFollower   ?? existing?.is_follower   ?? false,
+    milestone:     next.name,
+    last_seen:     new Date().toISOString(),
+    ...(existing ? {} : { first_seen: new Date().toISOString() }),
+  };
+
+  await supabase.from('loyalty').upsert(row, { onConflict: 'channel_id,user_id' });
+
+  // Milestone crossed?
+  if (next.pts > prev.pts) {
+    const name = displayName || username;
+    await pushAlert(channelId, 'milestone',
+      `${name} reached ${next.icon} ${next.name} (${score} pts)!`, '🏆');
+    const token = await getChannelToken(channelId);
+    if (token) await sendChat(channelId, token,
+      `🏆 ${next.icon} @${username} just reached ${next.name} status with ${score} loyalty points! Congrats!`);
   }
 }
 
-async function createSubscriptions(ch) {
+async function pushAlert(channelId, type, message, icon) {
+  await supabase.from('alerts').insert({ channel_id: channelId, type, message, icon });
+}
+
+// ── BLAZE CHAT ──
+async function sendChat(channelId, token, message) {
+  try {
+    const res = await fetch(`${API}/chats/messages`, {
+      method: 'POST',
+      headers: blazeHeaders(token),
+      body: JSON.stringify({ channelId, message })
+    });
+    console.log(`[${channelId.slice(0,8)}] SENT: ${message}`);
+  } catch (e) {
+    console.error(`[${channelId.slice(0,8)}] sendChat error:`, e.message);
+  }
+}
+
+// ── SUBSCRIPTIONS ──
+async function createSubscriptions(channelId, token, sessionId) {
   const types = [
     'channel.chat.message', 'channel.follow', 'channel.unfollow',
     'channel.subscribe', 'channel.subscription.gift', 'channel.vote',
@@ -140,282 +136,306 @@ async function createSubscriptions(ch) {
     try {
       const res  = await fetch(`${API}/events/subscriptions`, {
         method: 'POST',
-        headers: blazeHeaders(ch.token),
-        body: JSON.stringify({ type, version: '1', sessionId: ch.sessionId, condition: { channelId: ch.channelId } })
+        headers: blazeHeaders(token),
+        body: JSON.stringify({ type, version: '1', sessionId, condition: { channelId } })
       });
       const data = await res.json();
-      console.log(`[${ch.channelId.slice(0,8)}] SUB ${type}:`, data.id ? 'ok' : JSON.stringify(data));
+      console.log(`[${channelId.slice(0,8)}] SUB ${type}:`, data.id ? 'ok' : JSON.stringify(data).slice(0,80));
     } catch (e) {
-      console.error(`[${ch.channelId.slice(0,8)}] SUB error ${type}:`, e.message);
+      console.error(`[${channelId.slice(0,8)}] SUB error:`, e.message);
     }
   }
 }
 
 // ── BOT COMMANDS ──
-async function handleCommand(ch, message, sender) {
+async function handleCommand(channelId, token, message, sender) {
   const parts = message.trim().split(/\s+/);
   const cmd   = parts[0].toLowerCase();
-  const arg   = parts.slice(1).join(' ').replace('@', '');
+  const arg   = parts.slice(1).join(' ').replace('@', '').trim();
+
+  const say = (msg) => sendChat(channelId, token, msg);
 
   switch (cmd) {
     case '!devoted': {
-      const top = getTopUsers(ch, 5);
-      if (!top.length) { await sendChat(ch, 'No data yet — keep chatting!'); return; }
+      const { data: top } = await supabase
+        .from('loyalty').select('username,score')
+        .eq('channel_id', channelId)
+        .order('score', { ascending: false }).limit(5);
+      if (!top?.length) { await say('No data yet — keep chatting!'); return; }
       const lines = top.map((u, i) => `${['🥇','🥈','🥉','4.','5.'][i]} @${u.username} (${u.score} pts)`);
-      await sendChat(ch, `🏆 TOP DEVOTED: ${lines.join(' | ')}`);
+      await say(`🏆 TOP DEVOTED: ${lines.join(' | ')}`);
       break;
     }
     case '!loyalty': {
       const target = arg || sender.username;
-      const u = findUser(ch, target);
-      if (!u) { await sendChat(ch, `@${target} hasn't been tracked yet.`); return; }
+      const { data: u } = await supabase
+        .from('loyalty').select('*')
+        .eq('channel_id', channelId)
+        .eq('username', target).single();
+      if (!u) { await say(`@${target} hasn't been tracked yet.`); return; }
       const ms   = getMilestone(u.score);
       const next = getNextMilestone(u.score);
-      const rank = getRank(ch, u.id);
-      await sendChat(ch, `${ms.icon} @${u.username} — Rank #${rank} | ${u.score} pts | ${ms.name}${next ? ` → next: ${next.name} @ ${next.pts} pts` : ' (MAX 👑)'}`);
+      // Get rank
+      const { count } = await supabase.from('loyalty')
+        .select('*', { count: 'exact', head: true })
+        .eq('channel_id', channelId).gt('score', u.score);
+      const rank = (count || 0) + 1;
+      await say(`${ms.icon} @${u.username} — Rank #${rank} | ${u.score} pts | ${ms.name}${next ? ` → next: ${next.name} @ ${next.pts} pts` : ' (MAX 👑)'}`);
       break;
     }
     case '!shoutout': {
-      if (!arg) { await sendChat(ch, 'Usage: !shoutout @username'); return; }
-      const u = findUser(ch, arg);
-      if (!u) { await sendChat(ch, `@${arg} hasn't chatted here yet!`); return; }
+      if (!arg) { await say('Usage: !shoutout @username'); return; }
+      const { data: u } = await supabase
+        .from('loyalty').select('*')
+        .eq('channel_id', channelId)
+        .eq('username', arg).single();
+      if (!u) { await say(`@${arg} hasn't chatted here yet!`); return; }
       const ms = getMilestone(u.score);
-      await sendChat(ch, `📣 Shoutout to @${u.username}! ${ms.icon} ${ms.name} — ${u.score} pts | ${u.msgs || 0} msgs | ${u.subs || 0} subs | ${u.gifts || 0} gifts! Go show them love! ⚡`);
+      await say(`📣 Shoutout to @${u.username}! ${ms.icon} ${ms.name} — ${u.score} pts | ${u.msgs} msgs | ${u.subs} subs | ${u.gifts} gifts! Go show them love! ⚡`);
       break;
     }
     case '!milestone': {
       const target = arg || sender.username;
-      const u = findUser(ch, target);
-      if (!u) { await sendChat(ch, `@${target} not found.`); return; }
-      const next = getNextMilestone(u.score);
+      const { data: u } = await supabase
+        .from('loyalty').select('score,username')
+        .eq('channel_id', channelId)
+        .eq('username', target).single();
+      if (!u) { await say(`@${target} not found.`); return; }
       const ms   = getMilestone(u.score);
-      if (!next) { await sendChat(ch, `👑 @${u.username} is already a LEGEND — max tier reached!`); return; }
-      await sendChat(ch, `${ms.icon} @${u.username} needs ${next.pts - u.score} more pts to reach ${next.icon} ${next.name}!`);
+      const next = getNextMilestone(u.score);
+      if (!next) { await say(`👑 @${u.username} is already a LEGEND — max tier reached!`); return; }
+      await say(`${ms.icon} @${u.username} needs ${next.pts - u.score} more pts to reach ${next.icon} ${next.name}!`);
       break;
     }
     case '!leaderboard': {
-      const top = getTopUsers(ch, 3);
-      if (!top.length) { await sendChat(ch, 'No data yet!'); return; }
+      const { data: top } = await supabase
+        .from('loyalty').select('username,score')
+        .eq('channel_id', channelId)
+        .order('score', { ascending: false }).limit(3);
+      if (!top?.length) { await say('No data yet!'); return; }
       const lines = top.map((u, i) => `${['🥇','🥈','🥉'][i]} @${u.username} — ${u.score} pts (${getMilestone(u.score).name})`);
-      await sendChat(ch, `⚡ DEVOTION LEADERBOARD ⚡ ${lines.join(' | ')} | Blaze Companion`);
+      await say(`⚡ DEVOTION LEADERBOARD ⚡ ${lines.join(' | ')} | Blaze Companion`);
       break;
     }
     case '!hug': {
-      if (!arg) { await sendChat(ch, 'Usage: !hug @username'); return; }
-      const u = findUser(ch, arg) || { username: arg, score: 0 };
-      await sendChat(ch, `🤗 Sending a big hug to @${u.username}! ${getMilestone(u.score).icon} Blaze Companion loves our community! ⚡💛`);
+      if (!arg) { await say('Usage: !hug @username'); return; }
+      const { data: u } = await supabase
+        .from('loyalty').select('score').eq('channel_id', channelId).eq('username', arg).single();
+      await say(`🤗 Big hug to @${arg}! ${getMilestone(u?.score||0).icon} Blaze Companion loves our community! ⚡💛`);
       break;
     }
     case '!uptime': {
-      const mins = Math.round((Date.now() - startedAt) / 60000);
-      await sendChat(ch, `⚡ Blaze Companion running for ${mins} min. Tracking ${Object.keys(ch.loyalty).length} members in this channel!`);
+      const mins  = Math.round((Date.now() - startedAt) / 60000);
+      const { count } = await supabase
+        .from('loyalty').select('*', { count: 'exact', head: true })
+        .eq('channel_id', channelId);
+      await say(`⚡ Blaze Companion running for ${mins} min. Tracking ${count || 0} members — data saved forever in Supabase!`);
       break;
     }
   }
 }
 
 // ── EVENT HANDLER ──
-function handleEvent(ch, type, payload) {
+async function handleEvent(channelId, token, type, payload) {
   switch (type) {
     case 'channel.chat.message': {
       const { sender, message } = payload;
-      ch.stats.msgs++;
-      addScore(ch, sender.id, sender.username, sender.displayName, sender.avatarUrl, 'msg', 1, {
-        isSubscriber: sender.isSubscriber, isFollower: sender.isFollower
-      });
-      pushAlert(ch, 'chat', `${sender.displayName || sender.username}: ${message}`, '💬');
-      if (message.startsWith('!')) handleCommand(ch, message, sender);
+      await upsertLoyalty(channelId, sender.id, sender.username, sender.displayName, sender.avatarUrl, 'msg', 1,
+        { isSubscriber: sender.isSubscriber, isFollower: sender.isFollower });
+      await pushAlert(channelId, 'chat', `${sender.displayName || sender.username}: ${message}`, '💬');
+      if (message.startsWith('!')) handleCommand(channelId, token, message, sender);
       break;
     }
     case 'channel.follow': {
       const { follower } = payload;
-      ch.stats.follows++;
-      addScore(ch, follower.id, follower.username, follower.displayName, follower.avatarUrl, 'follow', 1, { isFollower: true });
-      pushAlert(ch, 'follow', `${follower.displayName || follower.username} followed! (+10 pts)`, '💙');
+      await upsertLoyalty(channelId, follower.id, follower.username, follower.displayName, follower.avatarUrl, 'follow', 1, { isFollower: true });
+      await pushAlert(channelId, 'follow', `${follower.displayName || follower.username} followed! (+10 pts)`, '💙');
       break;
     }
     case 'channel.unfollow': {
       const { follower } = payload;
-      if (ch.loyalty[follower.id]) ch.loyalty[follower.id].score = Math.max(0, ch.loyalty[follower.id].score - 5);
-      pushAlert(ch, 'follow', `${follower.displayName || follower.username} unfollowed.`, '💔');
+      // Subtract 5 pts on unfollow
+      await supabase.rpc('decrement_score', { p_channel_id: channelId, p_user_id: follower.id, p_amount: 5 });
+      await pushAlert(channelId, 'follow', `${follower.displayName || follower.username} unfollowed.`, '💔');
       break;
     }
     case 'channel.subscribe': {
       const { subscriber } = payload;
-      ch.stats.subs++;
-      addScore(ch, subscriber.id, subscriber.username, subscriber.displayName, subscriber.avatarUrl, 'sub', 1, { isSubscriber: true });
-      pushAlert(ch, 'sub', `${subscriber.displayName || subscriber.username} subscribed! (+50 pts)`, '💜');
+      await upsertLoyalty(channelId, subscriber.id, subscriber.username, subscriber.displayName, subscriber.avatarUrl, 'sub', 1, { isSubscriber: true });
+      await pushAlert(channelId, 'sub', `${subscriber.displayName || subscriber.username} subscribed! (+50 pts)`, '💜');
       break;
     }
     case 'channel.subscription.gift': {
       const { sender, giftCount } = payload;
-      ch.stats.gifts += giftCount;
-      addScore(ch, sender.id, sender.username, sender.displayName, sender.avatarUrl, 'gift', giftCount);
-      pushAlert(ch, 'gift', `${sender.displayName || sender.username} gifted ${giftCount} sub${giftCount > 1 ? 's' : ''}! (+${SCORES.gift * giftCount} pts)`, '🎁');
+      await upsertLoyalty(channelId, sender.id, sender.username, sender.displayName, sender.avatarUrl, 'gift', giftCount);
+      await pushAlert(channelId, 'gift', `${sender.displayName || sender.username} gifted ${giftCount} sub${giftCount > 1 ? 's' : ''}!`, '🎁');
       break;
     }
     case 'channel.vote': {
-      const { voter, amount } = payload;
-      ch.stats.votes += amount;
-      addScore(ch, voter.id, voter.username, voter.displayName, voter.avatarUrl, 'vote', 1);
-      pushAlert(ch, 'vote', `${voter.displayName || voter.username} voted! (+${SCORES.vote} pts)`, '⚡');
+      const { voter } = payload;
+      await upsertLoyalty(channelId, voter.id, voter.username, voter.displayName, voter.avatarUrl, 'vote', 1);
+      await pushAlert(channelId, 'vote', `${voter.displayName || voter.username} voted! (+${SCORES.vote} pts)`, '⚡');
       break;
     }
     case 'channel.raid': {
       const { raider } = payload;
-      pushAlert(ch, 'raid', `RAID from ${raider.displayName || raider.username}!`, '🚨');
-      sendChat(ch, `🚨 RAID ALERT! Welcome ${raider.displayName || raider.username} and their crew! ⚡`);
+      await pushAlert(channelId, 'raid', `RAID from ${raider.displayName || raider.username}!`, '🚨');
+      await sendChat(channelId, token, `🚨 RAID ALERT! Welcome ${raider.displayName || raider.username} and their crew! ⚡`);
       break;
     }
-    case 'channel.ban':      pushAlert(ch, 'mod', `${payload.bannedUser?.username} was banned.`, '🔨'); break;
-    case 'channel.unban':    pushAlert(ch, 'mod', `${payload.unbannedUser?.username} was unbanned.`, '✅'); break;
-    case 'channel.moderate': pushAlert(ch, 'mod', `Mod: ${payload.action} on ${payload.targetUser?.username}`, '🛡'); break;
-    case 'stream.online':    pushAlert(ch, 'stream', `Stream LIVE! "${payload.title}"`, '🟢'); break;
-    case 'stream.offline':   pushAlert(ch, 'stream', `Stream ended. ${Math.round((payload.durationSeconds || 0) / 60)} min.`, '🔴'); break;
+    case 'channel.ban':      await pushAlert(channelId, 'mod', `${payload.bannedUser?.username} was banned.`, '🔨'); break;
+    case 'channel.unban':    await pushAlert(channelId, 'mod', `${payload.unbannedUser?.username} was unbanned.`, '✅'); break;
+    case 'channel.moderate': await pushAlert(channelId, 'mod', `Mod: ${payload.action} on ${payload.targetUser?.username}`, '🛡'); break;
+    case 'stream.online':    await pushAlert(channelId, 'stream', `Stream LIVE! "${payload.title}"`, '🟢'); break;
+    case 'stream.offline':   await pushAlert(channelId, 'stream', `Stream ended. ${Math.round((payload.durationSeconds || 0) / 60)} min.`, '🔴'); break;
   }
 }
 
-// ── SOCKET PER CHANNEL ──
-function connectChannel(ch) {
-  if (ch.socket) ch.socket.disconnect();
-  clearTimeout(ch.reconnectTimer);
-  console.log(`[${ch.channelId.slice(0,8)}] Connecting...`);
+// ── CONNECT ONE CHANNEL ──
+function connectChannel(channelId, token) {
+  const existing = sockets[channelId];
+  if (existing) {
+    clearTimeout(existing.reconnectTimer);
+    if (existing.socket) existing.socket.disconnect();
+  }
 
-  const socket = io('https://blaze.stream', { path: '/ws', transports: ['websocket'] });
-  ch.socket = socket;
+  console.log(`[${channelId.slice(0,8)}] Connecting socket...`);
+  const sock = io('https://blaze.stream', { path: '/ws', transports: ['websocket'] });
+  sockets[channelId] = { socket: sock, sessionId: '', connected: false, reconnectTimer: null, token };
 
-  socket.on('connect', () => console.log(`[${ch.channelId.slice(0,8)}] Socket connected`));
+  sock.on('connect', () => console.log(`[${channelId.slice(0,8)}] Socket open`));
 
-  socket.on('eventsub', async (msg) => {
+  sock.on('eventsub', async (msg) => {
     const { metadata, payload } = msg;
     if (metadata.messageType === 'session_welcome') {
-      ch.sessionId = payload.sessionId;
-      await createSubscriptions(ch);
-      ch.connected = true;
-      console.log(`[${ch.channelId.slice(0,8)}] Live — tracking loyalty 24/7`);
+      const sessionId = payload.sessionId;
+      sockets[channelId].sessionId  = sessionId;
+      sockets[channelId].connected  = true;
+      await createSubscriptions(channelId, token, sessionId);
+      // Mark connected in DB
+      await supabase.from('channels').update({ connected: true, last_seen: new Date().toISOString() }).eq('id', channelId);
+      console.log(`[${channelId.slice(0,8)}] LIVE — loyalty tracking active`);
       return;
     }
-    handleEvent(ch, metadata.subscriptionType, payload);
+    handleEvent(channelId, token, metadata.subscriptionType, payload);
   });
 
-  socket.on('disconnect', (reason) => {
-    ch.connected = false;
-    console.log(`[${ch.channelId.slice(0,8)}] Disconnected: ${reason}. Reconnecting in 5s...`);
-    ch.reconnectTimer = setTimeout(() => connectChannel(ch), 5000);
+  sock.on('disconnect', async (reason) => {
+    if (sockets[channelId]) sockets[channelId].connected = false;
+    await supabase.from('channels').update({ connected: false }).eq('id', channelId);
+    console.log(`[${channelId.slice(0,8)}] Disconnected: ${reason}. Reconnect in 5s...`);
+    sockets[channelId].reconnectTimer = setTimeout(() => connectChannel(channelId, token), 5000);
   });
 
-  socket.on('connect_error', (e) => {
-    ch.connected = false;
-    console.error(`[${ch.channelId.slice(0,8)}] Connect error: ${e.message}. Retry in 10s...`);
-    ch.reconnectTimer = setTimeout(() => connectChannel(ch), 10000);
+  sock.on('connect_error', (e) => {
+    if (sockets[channelId]) sockets[channelId].connected = false;
+    console.error(`[${channelId.slice(0,8)}] Error: ${e.message}. Retry in 10s...`);
+    sockets[channelId].reconnectTimer = setTimeout(() => connectChannel(channelId, token), 10000);
   });
+}
+
+// ── BOOT: reconnect all saved channels from Supabase ──
+async function bootChannels() {
+  console.log('[BOT] Loading saved channels from Supabase...');
+  const { data: saved, error } = await supabase
+    .from('channels')
+    .select('id, token')
+    .not('token', 'is', null);
+
+  if (error) { console.error('[BOT] Supabase boot error:', error.message); return; }
+  if (!saved?.length) { console.log('[BOT] No saved channels yet.'); return; }
+
+  console.log(`[BOT] Reconnecting ${saved.length} channel(s)...`);
+  for (const ch of saved) {
+    connectChannel(ch.id, ch.token);
+  }
 }
 
 // ── REST API ──
-
 app.get('/', (req, res) => {
-  res.json({
-    name: 'Blaze Companion Bot',
-    status: 'ok',
-    channels: Object.keys(channels).length,
-    uptime: Math.round((Date.now() - startedAt) / 1000)
-  });
+  const connected = Object.values(sockets).filter(s => s.connected).length;
+  res.json({ name: 'Blaze Companion Bot', status: 'ok', channels: Object.keys(sockets).length, connected, uptime: Math.round((Date.now() - startedAt) / 1000) });
 });
 
-// UptimeRobot pings this
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    channels: Object.keys(channels).length,
-    connected: Object.values(channels).filter(c => c.connected).length,
-    uptime: Math.round((Date.now() - startedAt) / 1000)
-  });
+  const connected = Object.values(sockets).filter(s => s.connected).length;
+  res.json({ status: 'ok', channels: Object.keys(sockets).length, connected, uptime: Math.round((Date.now() - startedAt) / 1000) });
 });
 
-// Connect a channel — each user calls this with their own token + channelId
-app.post('/api/connect', (req, res) => {
-  const { token, channelId } = req.body;
+// Dashboard calls this after OAuth — saves token to Supabase, connects socket
+app.post('/api/connect', async (req, res) => {
+  const { token, channelId, username, displayName, avatarUrl } = req.body;
   if (!token || !channelId) return res.status(400).json({ error: 'token and channelId required' });
 
-  if (channels[channelId]) {
-    // Already exists — update token and reconnect
-    channels[channelId].token = token;
-    connectChannel(channels[channelId]);
-    return res.json({ ok: true, message: 'Reconnecting channel...' });
-  }
+  // Save/update channel in Supabase
+  await supabase.from('channels').upsert({
+    id: channelId, token, username, display_name: displayName, avatar_url: avatarUrl,
+    last_seen: new Date().toISOString()
+  }, { onConflict: 'id' });
 
-  // New channel
-  const ch = makeChannelState(channelId, token);
-  channels[channelId] = ch;
-  connectChannel(ch);
-  res.json({ ok: true, message: 'Channel connected!', channelId });
+  connectChannel(channelId, token);
+  res.json({ ok: true, message: 'Channel connected and saved!' });
 });
 
-// Disconnect a channel
-app.post('/api/disconnect', (req, res) => {
-  const { channelId } = req.body;
-  if (!channelId || !channels[channelId]) return res.status(404).json({ error: 'Channel not found' });
-  const ch = channels[channelId];
-  clearTimeout(ch.reconnectTimer);
-  if (ch.socket) ch.socket.disconnect();
-  delete channels[channelId];
-  res.json({ ok: true });
-});
-
-// Get state for a specific channel
-app.get('/api/state', (req, res) => {
+// State for dashboard polling
+app.get('/api/state', async (req, res) => {
   const { channelId } = req.query;
-  if (!channelId || !channels[channelId]) {
-    return res.status(404).json({ error: 'Channel not connected', channelId });
-  }
-  const ch = channels[channelId];
+  if (!channelId) return res.status(400).json({ error: 'channelId required' });
+
+  const sock = sockets[channelId];
+
+  const [loyaltyRes, alertsRes, statsRes] = await Promise.all([
+    supabase.from('loyalty').select('*').eq('channel_id', channelId).order('score', { ascending: false }).limit(20),
+    supabase.from('alerts').select('*').eq('channel_id', channelId).order('created_at', { ascending: false }).limit(50),
+    supabase.from('loyalty').select('msgs.sum(),follows.sum(),subs.sum(),gifts.sum(),votes.sum()', { count: 'exact' }).eq('channel_id', channelId)
+  ]);
+
+  const agg = statsRes.data?.[0] || {};
   res.json({
-    connected: ch.connected,
-    channelId: ch.channelId,
-    stats: ch.stats,
-    alerts: ch.alerts.slice(0, 50),
-    uptime: Math.round((Date.now() - startedAt) / 1000),
-    topUsers: getTopUsers(ch, 20)
+    connected: sock?.connected || false,
+    channelId,
+    stats: {
+      chatters: statsRes.count || 0,
+      msgs:     agg['sum(msgs)']    || 0,
+      follows:  agg['sum(follows)'] || 0,
+      subs:     agg['sum(subs)']    || 0,
+      gifts:    agg['sum(gifts)']   || 0,
+      votes:    agg['sum(votes)']   || 0,
+    },
+    topUsers: loyaltyRes.data || [],
+    alerts:   alertsRes.data  || [],
+    uptime:   Math.round((Date.now() - startedAt) / 1000)
   });
 });
 
-// Send chat message to a specific channel
+// Send chat from dashboard
 app.post('/api/chat', async (req, res) => {
   const { channelId, message } = req.body;
   if (!channelId || !message) return res.status(400).json({ error: 'channelId and message required' });
-  const ch = channels[channelId];
-  if (!ch) return res.status(404).json({ error: 'Channel not connected' });
-  await sendChat(ch, message);
+  const token = sockets[channelId]?.token || await getChannelToken(channelId);
+  if (!token) return res.status(404).json({ error: 'Channel not connected' });
+  await sendChat(channelId, token, message);
   res.json({ ok: true });
 });
 
 // Reset loyalty for a channel
-app.post('/api/reset', (req, res) => {
+app.post('/api/reset', async (req, res) => {
   const { channelId } = req.body;
-  if (!channelId || !channels[channelId]) return res.status(404).json({ error: 'Channel not found' });
-  const ch = channels[channelId];
-  ch.loyalty = {};
-  ch.stats   = { chatters: 0, msgs: 0, follows: 0, subs: 0, gifts: 0, votes: 0 };
-  ch.alerts  = [];
+  if (!channelId) return res.status(400).json({ error: 'channelId required' });
+  await supabase.from('loyalty').delete().eq('channel_id', channelId);
+  await supabase.from('alerts').delete().eq('channel_id', channelId);
   res.json({ ok: true });
 });
 
-// List all active channels (admin overview)
-app.get('/api/channels', (req, res) => {
-  res.json({
-    total: Object.keys(channels).length,
-    channels: Object.entries(channels).map(([id, ch]) => ({
-      channelId: id,
-      connected: ch.connected,
-      chatters: Object.keys(ch.loyalty).length,
-      stats: ch.stats
-    }))
-  });
+// List all channels
+app.get('/api/channels', async (req, res) => {
+  const { data } = await supabase.from('channels').select('id,username,display_name,connected,last_seen');
+  res.json({ total: data?.length || 0, channels: data || [] });
 });
 
 // ── START ──
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`[BOT] Blaze Companion running on port ${PORT}`);
-  console.log(`[BOT] Multi-channel mode — any creator can connect`);
+  await bootChannels(); // ← auto-reconnect all saved channels on every boot
 });
