@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -349,10 +348,6 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 
 <script>
 // ── CONFIG ──
-const BOT_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:3000'
-  : 'https://hotemin.onrender.com'; // ← REPLACE with your Render URL after deploy
-
 const CLIENT_ID = 'UR4ghwgTTJ2rAE1_KBZgmCKmkvQtO4ux';
 const CLIENT_SECRET = 'IFwFHaqzi_sA0FfJ9nWiQSR0ug3GPUWZMr0qw3LvMZ0';
 const API = 'https://api.blaze.stream/v1';
@@ -508,75 +503,92 @@ function startWithToken() {
 function showSetup() { document.getElementById('setup-overlay').style.display = 'flex'; }
 function onChannelIdChange() { channelId = document.getElementById('channel-id-input').value.trim(); }
 
-// ── SOCKET.IO ──
+// ── BACKEND CONNECTION ──
+const BOT_URL = 'https://hotemin.onrender.com';
+
 async function connectSocket() {
   channelId = document.getElementById('channel-id-input').value.trim() || channelId;
   if (!channelId) { toast('Enter a Channel ID first'); return; }
-  if (!accessToken) { toast('Login first'); return; }
+  if (!accessToken) { toast('Login with Blaze first'); return; }
 
   setConnStatus('connecting');
   document.getElementById('connect-btn').textContent = 'Connecting…';
 
-  if (socket) { socket.disconnect(); }
-
-  socket = io('https://blaze.stream', { path:'/ws', transports:['websocket'] });
-
-  socket.on('connect', () => {
-    setConnStatus('connecting');
-  });
-
-  socket.on('eventsub', async (msg) => {
-    const { metadata, payload } = msg;
-
-    if (metadata.messageType === 'session_welcome') {
-      socketSessionId = payload.sessionId;
-      await createSubscriptions();
-      setConnStatus('connected');
+  try {
+    const res = await fetch(`${BOT_URL}/api/connect`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token: accessToken, channelId })
+    });
+    const data = await res.json();
+    if (data.ok) {
       document.getElementById('connect-btn').textContent = 'Connected ✓';
       document.getElementById('channel-label').textContent = channelId.slice(0,8) + '…';
       connectedAt = Date.now();
-      pushAlert('stream', 'Bot connected to channel. Tracking loyalty in real time.', '⚡');
-      return;
+      pushAlert('stream', '✅ Bot connected on Render — tracking loyalty 24/7 even when this tab is closed!', '⚡');
+      startPolling();
+    } else {
+      toast('Connect failed: ' + JSON.stringify(data));
+      document.getElementById('connect-btn').textContent = 'Connect to Channel';
+      setConnStatus('disconnected');
     }
-
-    handleEvent(metadata.subscriptionType, payload);
-  });
-
-  socket.on('disconnect', () => {
-    setConnStatus('disconnected');
-    document.getElementById('connect-btn').textContent = 'Reconnect';
-  });
-
-  socket.on('connect_error', (e) => {
-    setConnStatus('disconnected');
+  } catch(e) {
+    toast('Cannot reach bot at ' + BOT_URL);
     document.getElementById('connect-btn').textContent = 'Connect to Channel';
-    toast('Connection error: ' + e.message);
-  });
+    setConnStatus('disconnected');
+  }
 }
 
-async function createSubscriptions() {
-  const types = [
-    'channel.chat.message',
-    'channel.follow',
-    'channel.unfollow',
-    'channel.subscribe',
-    'channel.subscription.gift',
-    'channel.vote',
-    'channel.ban',
-    'channel.unban',
-    'channel.raid',
-    'channel.moderate',
-    'stream.online',
-    'stream.offline',
-  ];
-  for (const type of types) {
-    try {
-      await fetch(`${API}/events/subscriptions`, {
-        method:'POST',
-        headers:{ 'client-id':CLIENT_ID, 'authorization':`Bearer ${accessToken}`, 'content-type':'application/json' },
-        body: JSON.stringify({ type, version:'1', sessionId:socketSessionId, condition:{ channelId } })
-      });
-    } catch(e) {}
+// ── POLL BACKEND FOR STATE every 3s ──
+let pollTimer = null;
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(pollState, 3000);
+  pollState();
+}
+
+async function pollState() {
+  if (!channelId) return;
+  try {
+    const res  = await fetch(`${BOT_URL}/api/state?channelId=${channelId}`);
+    if (!res.ok) return;
+    const data = await res.json();
+
+    setConnStatus(data.connected ? 'connected' : 'disconnected');
+
+    // Sync stats
+    if (data.stats) {
+      stats = data.stats;
+      document.getElementById('stat-chatters').textContent = stats.chatters;
+      document.getElementById('stat-msgs').textContent     = stats.msgs;
+      document.getElementById('stat-follows').textContent  = stats.follows;
+      document.getElementById('stat-subs').textContent     = stats.subs;
+      document.getElementById('stat-gifts').textContent    = stats.gifts;
+      document.getElementById('stat-votes').textContent    = stats.votes;
+    }
+
+    // Sync loyalty leaderboard
+    if (data.topUsers) {
+      loyalty = {};
+      data.topUsers.forEach(u => { loyalty[u.id] = u; });
+      renderLeaderboard();
+    }
+
+    // Sync alerts feed
+    if (data.alerts && data.alerts.length) {
+      const feed = document.getElementById('alert-feed');
+      feed.querySelectorAll('.empty').forEach(e => e.remove());
+      feed.innerHTML = data.alerts.map(a => `
+        <div class="alert-item ${a.type}">
+          <div class="alert-icon">${a.icon}</div>
+          <div class="alert-body">
+            <div class="alert-msg">${escHtml(a.message)}</div>
+            <div class="alert-time">${new Date(a.time).toLocaleTimeString()}</div>
+          </div>
+        </div>`).join('');
+    }
+  } catch(e) {
+    setConnStatus('disconnected');
   }
 }
 
@@ -731,14 +743,15 @@ async function handleBotCommand(message, sender) {
 }
 
 async function sendChat(message) {
+  if (!channelId) return;
   try {
     await fetch(`${BOT_URL}/api/chat`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ message })
+      method:'POST',
+      headers:{ 'content-type':'application/json' },
+      body: JSON.stringify({ channelId, message })
     });
     addBotChatMessage(message);
-  } catch(e) { toast('Could not send message'); }
+  } catch(e) { toast('Could not send message to bot'); }
 }
 
 async function sendBotMessage() {
