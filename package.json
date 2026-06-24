@@ -1,0 +1,15 @@
+{
+  "name": "blaze-companion-bot",
+  "version": "1.0.0",
+  "description": "Blaze Companion loyalty bot - persistent backend",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io-client": "^4.7.5",
+    "node-fetch": "^2.7.0",
+    "cors": "^2.8.5"
+  }
+}

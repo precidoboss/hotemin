@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: blaze-companion-bot
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: BLAZE_CLIENT_ID
+        value: UR4ghwgTTJ2rAE1_KBZgmCKmkvQtO4ux
+      - key: BLAZE_CLIENT_SECRET
+        value: IFwFHaqzi_sA0FfJ9nWiQSR0ug3GPUWZMr0qw3LvMZ0
+      - key: BLAZE_TOKEN
+        sync: false
+      - key: BLAZE_CHANNEL
+        sync: false
