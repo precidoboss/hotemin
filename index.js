@@ -182,59 +182,26 @@ async function sendChat(channelId, token, message) {
 }
 
 // ── BOT FOLLOW USER ──
-// ── BOT FOLLOW USER via internal bapi ──
+// ── BOT FOLLOW USER ──
 async function botFollowChannel(targetChannelId) {
-  // Blaze's public API has no follow endpoint, but their internal bapi does.
-  // These are the same base URLs used by the Blaze website itself.
-  const attempts = [
-    {
-      url:    'https://blaze.stream/bapi/channels/follow',
+  try {
+    const res = await fetch(`https://blaze.stream/bapi/channels/${targetChannelId}/follow`, {
       method: 'POST',
-      body:   { channelId: targetChannelId }
-    },
-    {
-      url:    'https://blaze.stream/bapi/channel/follow',
-      method: 'POST',
-      body:   { channelId: targetChannelId }
-    },
-    {
-      url:    'https://blaze.stream/bapi/users/follow',
-      method: 'POST',
-      body:   { channelId: targetChannelId }
-    },
-    {
-      url:    `https://blaze.stream/bapi/channels/${targetChannelId}/follow`,
-      method: 'POST',
-      body:   {}
-    },
-  ];
-
-  for (const ep of attempts) {
-    try {
-      const res  = await fetch(ep.url, {
-        method:  ep.method,
-        headers: {
-          'content-type':  'application/json',
-          'accept':        'application/json',
-          'authorization': `Bearer ${BOT_TOKEN}`,
-          'client-id':     CLIENT_ID,
-        },
-        body: JSON.stringify(ep.body)
-      });
-      const text = await res.text();
-      console.log(`[BOT] Follow ${ep.url} → ${res.status}: ${text.slice(0, 100)}`);
-      let data = {};
-      try { data = JSON.parse(text); } catch {}
-      if (res.ok || data.success) {
-        console.log(`[BOT] ✅ Followed ${targetChannelId.slice(0,8)} via ${ep.url}`);
-        return true;
-      }
-    } catch (e) {
-      console.error(`[BOT] Follow error ${ep.url}:`, e.message);
-    }
+      headers: {
+        'authorization': `Bearer ${BOT_TOKEN}`,
+        'client-id':     CLIENT_ID,
+        'content-type':  'application/json',
+        'content-length': '0',
+      },
+      body: ''
+    });
+    const text = await res.text();
+    console.log(`[BOT] Follow ${targetChannelId.slice(0,8)} → ${res.status}: ${text.slice(0,80)}`);
+    return res.ok;
+  } catch (e) {
+    console.error(`[BOT] Follow error:`, e.message);
+    return false;
   }
-  console.log(`[BOT] ⚠ All follow attempts failed for ${targetChannelId.slice(0,8)}`);
-  return false;
 }
 
 // ── JOIN: streamer types !join in bot's channel ──
