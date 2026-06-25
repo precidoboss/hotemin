@@ -183,16 +183,32 @@ async function sendChat(channelId, token, message) {
 
 // ── BOT FOLLOW USER ──
 async function botFollowChannel(targetChannelId) {
-  try {
-    await fetch(`${API}/channels/follow`, {
-      method: 'POST',
-      headers: blazeHeaders(BOT_TOKEN),
-      body: JSON.stringify({ channelId: targetChannelId })
-    });
-    console.log(`[BOT] Followed channel ${targetChannelId.slice(0,8)}`);
-  } catch (e) {
-    console.error('[BOT] Follow error:', e.message);
+  // Try known Blaze follow endpoints
+  const endpoints = [
+    { method: 'POST', url: `${API}/channels/follow`,   body: { channelId: targetChannelId } },
+    { method: 'POST', url: `${API}/channels/follows`,  body: { channelId: targetChannelId } },
+    { method: 'POST', url: `${API}/users/follow`,      body: { channelId: targetChannelId } },
+    { method: 'PUT',  url: `${API}/channels/${targetChannelId}/follow`, body: {} },
+  ];
+  for (const ep of endpoints) {
+    try {
+      const res  = await fetch(ep.url, {
+        method:  ep.method,
+        headers: blazeHeaders(BOT_TOKEN),
+        body:    JSON.stringify(ep.body)
+      });
+      const data = await res.json();
+      console.log(`[BOT] Follow attempt ${ep.url}: ${res.status}`, JSON.stringify(data).slice(0, 80));
+      if (res.ok || data.success || data.data) {
+        console.log(`[BOT] ✅ Followed ${targetChannelId.slice(0,8)} via ${ep.url}`);
+        return true;
+      }
+    } catch (e) {
+      console.error(`[BOT] Follow error ${ep.url}:`, e.message);
+    }
   }
+  console.log(`[BOT] ⚠ Could not follow ${targetChannelId.slice(0,8)} — no working endpoint found yet`);
+  return false;
 }
 
 // ── JOIN: streamer types !join in bot's channel ──
@@ -258,11 +274,21 @@ async function handleJoin(sender) {
   await sendChat(BOT_CHANNEL_ID, BOT_TOKEN,
     `✅ @${username} ⚡ @${BOT_USERNAME} has joined your channel! Go type /mod ${BOT_USERNAME} in your chat for full features!`);
 
-  // Welcome message in streamer's channel after socket connects
-  setTimeout(async () => {
-    await sendChat(streamerId, BOT_TOKEN,
-      `⚡ @${BOT_USERNAME} is now active! Loyalty tracking is ON. Type !commands to see all features. Mod me with /mod ${BOT_USERNAME} for full power!`);
-  }, 5000);
+  // Welcome message in streamer's channel — poll until socket is connected then send
+  let attempts = 0;
+  const welcomeInterval = setInterval(async () => {
+    attempts++;
+    const sock = sockets[streamerId];
+    if (sock?.connected || attempts >= 10) {
+      clearInterval(welcomeInterval);
+      if (sock?.connected) {
+        await sendChat(streamerId, BOT_TOKEN,
+          `⚡ @${BOT_USERNAME} is now active in this channel! Loyalty tracking is ON 🏆 Type !commands to see all features. Mod me with /mod ${BOT_USERNAME} for full power!`);
+      } else {
+        console.error(`[BOT] Socket for ${streamerId.slice(0,8)} never connected — welcome msg skipped`);
+      }
+    }
+  }, 1000); // check every 1s, up to 10s
 
   console.log(`[BOT] ✅ Joined channel @${username} (${streamerId})`);
 }
