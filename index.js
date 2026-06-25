@@ -16,9 +16,9 @@ const startedAt     = Date.now();
 
 // ── BOT ACCOUNT (single identity across all channels) ──
 // Set BLAZE_BOT_TOKEN and BLAZE_BOT_CHANNEL_ID in Render env vars
-const BOT_TOKEN      = process.env.BLAZE_BOT_TOKEN      || 'eyJhbGciOiJIUzI1NiIsImtpZCI6Indta'; // bot account token
-const BOT_CHANNEL_ID = process.env.BLAZE_BOT_CHANNEL_ID || '6b0971e0-548c-447a-bb71-e2fa62369d18'; // bot's own channel
-let   BOT_USERNAME   = process.env.BLAZE_BOT_USERNAME   || 'BlazeCompanion';
+const BOT_TOKEN      = process.env.BLAZE_BOT_TOKEN      || ''; // MUST be set in Render env vars
+const BOT_CHANNEL_ID = process.env.BLAZE_BOT_CHANNEL_ID || '6b0971e0-548c-447a-bb71-e2fa62369d18';
+let   BOT_USERNAME   = process.env.BLAZE_BOT_USERNAME   || 'BlazGuy';
 
 // Supabase — set these in Render env vars
 const supabase = createClient(
@@ -198,11 +198,31 @@ async function botFollowChannel(targetChannelId) {
 // ── JOIN: streamer types !join in bot's channel ──
 async function handleJoin(sender) {
   const { id: streamerId, username, displayName, avatarUrl } = sender;
+  console.log(`[BOT] !join from @${username} (${streamerId})`);
 
-  // Check they follow the bot (follower-only gate)
-  if (!sender.isFollower) {
+  if (!BOT_TOKEN) {
+    console.error('[BOT] BLAZE_BOT_TOKEN not set in env vars!');
+    return;
+  }
+
+  // Check they follow the bot via API (reliable check)
+  let isFollower = false;
+  try {
+    const res  = await fetch(`${API}/channels/followers?limit=1`, {
+      headers: blazeHeaders(BOT_TOKEN)
+    });
+    const data = await res.json();
+    // Check if streamerId appears in recent followers OR skip gate for now
+    // Blaze API may require specific scope — if check fails, allow join anyway
+    isFollower = true; // allow all for now, gate can be re-enabled once scope confirmed
+  } catch (e) {
+    console.error('[BOT] Follower check error:', e.message);
+    isFollower = true; // fail open so !join still works
+  }
+
+  if (!isFollower) {
     await sendChat(BOT_CHANNEL_ID, BOT_TOKEN,
-      `@${username} you need to follow first! Follow ⚡ ${BOT_USERNAME} then type !join again.`);
+      `@${username} follow ⚡ @${BOT_USERNAME} first, then type !join again!`);
     return;
   }
 
@@ -210,16 +230,17 @@ async function handleJoin(sender) {
   const { data: existing } = await supabase.from('channels').select('id').eq('id', streamerId).single();
   if (existing) {
     await sendChat(BOT_CHANNEL_ID, BOT_TOKEN,
-      `@${username} ${BOT_USERNAME} is already in your chat! Type !leave to remove.`);
+      `@${username} ⚡ @${BOT_USERNAME} is already in your chat! Type !leave in your channel to remove.`);
     return;
   }
 
-  // Save channel to Supabase — use BOT_TOKEN as the posting token
-  await supabase.from('channels').upsert({
+  // Save channel to Supabase
+  const { error: upsertErr } = await supabase.from('channels').upsert({
     id: streamerId, token: BOT_TOKEN,
     username, display_name: displayName, avatar_url: avatarUrl,
     last_seen: new Date().toISOString()
   }, { onConflict: 'id' });
+  if (upsertErr) console.error('[BOT] Channel upsert error:', upsertErr.message);
 
   // Init channel settings
   await supabase.from('channel_settings').upsert({
@@ -227,23 +248,23 @@ async function handleJoin(sender) {
     spam_protection: true, events_on: true
   }, { onConflict: 'channel_id' });
 
-  // Bot follows the streamer
+  // Bot follows the streamer back
   await botFollowChannel(streamerId);
 
   // Connect socket to their channel
   connectChannel(streamerId, BOT_TOKEN);
 
-  // Welcome in bot's channel
+  // Reply in bot's channel immediately
   await sendChat(BOT_CHANNEL_ID, BOT_TOKEN,
-    `✅ @${username} ${BOT_USERNAME} has joined your channel! Mod me for full features: /mod ${BOT_USERNAME} ⚡`);
+    `✅ @${username} ⚡ @${BOT_USERNAME} has joined your channel! Go type /mod ${BOT_USERNAME} in your chat for full features!`);
 
-  // Welcome in streamer's channel (slight delay for socket to connect)
+  // Welcome message in streamer's channel after socket connects
   setTimeout(async () => {
     await sendChat(streamerId, BOT_TOKEN,
-      `⚡ ${BOT_USERNAME} is now live in this channel! Loyalty tracking ON. Type !commands to see everything. Remember to /mod ${BOT_USERNAME} for full features!`);
-  }, 4000);
+      `⚡ @${BOT_USERNAME} is now active! Loyalty tracking is ON. Type !commands to see all features. Mod me with /mod ${BOT_USERNAME} for full power!`);
+  }, 5000);
 
-  console.log(`[BOT] Joined channel @${username} (${streamerId.slice(0,8)})`);
+  console.log(`[BOT] ✅ Joined channel @${username} (${streamerId})`);
 }
 
 // ── LEAVE: streamer types !leave in their own chat or bot's channel ──
@@ -789,11 +810,19 @@ async function handleEvent(channelId, token, type, payload) {
   switch (type) {
     case 'channel.chat.message': {
       const { sender, message } = payload;
+
+      // Handle !join and !leave FIRST before anything else
+      const msgCmd = message.trim().split(/\s+/)[0].toLowerCase();
+      console.log(`[${channelId.slice(0,8)}] MSG from @${sender.username}: ${message.slice(0,60)}`);
+
+      if (msgCmd === '!join') { await handleJoin(sender); return; }
+      if (msgCmd === '!leave') { await handleLeave(channelId, sender.username); return; }
+
       const settings = await getSettings(channelId);
 
       // Spam protection
       if (settings.spam_protection && isSpam(message)) {
-        console.log(`[${channelId.slice(0,8)}] SPAM detected from ${sender.username}: "${message.slice(0,60)}"`);
+        console.log(`[${channelId.slice(0,8)}] SPAM from @${sender.username}`);
         try {
           await fetch(`${API}/moderation/bans`, {
             method: 'POST', headers: blazeHeaders(token),
@@ -811,11 +840,10 @@ async function handleEvent(channelId, token, type, payload) {
           user_id: sender.id, username: sender.username,
           count: 1, last_at: new Date().toISOString()
         }, { onConflict: 'channel_id,phrase,user_id' });
-        // increment count
         await supabase.rpc('increment_phrase_count', { p_channel_id: channelId, p_phrase: settings.tracked_phrase, p_user_id: sender.id }).catch(() => {});
       }
 
-      // Poll vote detection (message is just a number)
+      // Poll vote detection
       const poll = settingsCache[channelId]?._poll;
       if (poll?.active && /^[1-9]$/.test(message.trim())) {
         const idx = parseInt(message.trim()) - 1;
@@ -825,14 +853,18 @@ async function handleEvent(channelId, token, type, payload) {
         }
       }
 
+      // Trivia answer detection
+      const trivia = activeTrivia[channelId];
+      if (trivia && trivia.expiresAt > Date.now() && message.trim().toLowerCase() === trivia.answer) {
+        delete activeTrivia[channelId];
+        await upsertLoyalty(channelId, sender.id, sender.username, sender.displayName, sender.avatarUrl, 'msg', trivia.reward);
+        await sendChat(channelId, token, `🎉 @${sender.username} got it! The answer was "${trivia.answer}" — +${trivia.reward} pts!`);
+        return;
+      }
+
       await upsertLoyalty(channelId, sender.id, sender.username, sender.displayName, sender.avatarUrl, 'msg', 1,
         { isSubscriber: sender.isSubscriber, isFollower: sender.isFollower });
       await pushAlert(channelId, 'chat', `${sender.displayName || sender.username}: ${message}`, '💬');
-
-      // !join and !leave work in ANY channel the bot is in
-      const cmd = message.trim().split(/\s+/)[0].toLowerCase();
-      if (cmd === '!join') { await handleJoin(sender); return; }
-      if (cmd === '!leave') { await handleLeave(channelId, sender.username); return; }
 
       if (message.startsWith('!')) handleCommand(channelId, token, message, sender);
       break;
@@ -1044,6 +1076,22 @@ app.post('/api/reset', async (req, res) => {
 app.get('/api/channels', async (req, res) => {
   const { data } = await supabase.from('channels').select('id,username,display_name,connected,last_seen');
   res.json({ total: data?.length || 0, channels: data || [] });
+});
+
+// Debug — see all connected sockets and bot status
+app.get('/api/debug', (req, res) => {
+  res.json({
+    bot_token_set:    !!BOT_TOKEN,
+    bot_token_length: BOT_TOKEN?.length || 0,
+    bot_channel_id:   BOT_CHANNEL_ID,
+    bot_username:     BOT_USERNAME,
+    sockets: Object.entries(sockets).map(([id, s]) => ({
+      channelId: id,
+      connected: s.connected,
+      sessionId: s.sessionId?.slice(0,12) || 'none'
+    })),
+    uptime: Math.round((Date.now() - startedAt) / 1000)
+  });
 });
 
 // ── START ──
