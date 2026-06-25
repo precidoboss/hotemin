@@ -3,544 +3,483 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blaze Companion — Stream Loyalty Intelligence</title>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<title>Blaze Companion — Streamer Dashboard</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
-
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --bg:#080B10;
-  --surface:#0E1118;
-  --card:#131720;
-  --border:#1E2433;
-  --border2:#252D3D;
-  --blaze:#F0B90B;
-  --blaze2:#FFD234;
-  --blazedim:rgba(240,185,11,0.12);
-  --text:#E8EAF0;
-  --muted:#5A6380;
-  --muted2:#8892AA;
-  --green:#22D47A;
-  --greendim:rgba(34,212,122,0.1);
-  --red:#F05050;
-  --reddim:rgba(240,80,80,0.1);
-  --blue:#4C8EF5;
-  --bluedim:rgba(76,142,245,0.1);
-  --purple:#9B6CF5;
-  --purpledim:rgba(155,108,245,0.1);
-  --gold:#F0B90B;
-  --silver:#9BACC8;
-  --bronze:#C87941;
+  --bg:#080B10;--surface:#0E1118;--card:#131720;--border:#1E2433;--border2:#252D3D;
+  --blaze:#F0B90B;--blaze2:#FFD234;--blazedim:rgba(240,185,11,0.12);
+  --text:#E8EAF0;--muted:#5A6380;--muted2:#8892AA;
+  --green:#22D47A;--greendim:rgba(34,212,122,0.1);
+  --red:#F05050;--reddim:rgba(240,80,80,0.1);
+  --blue:#4C8EF5;--purple:#9B6CF5;--purpledim:rgba(155,108,245,0.1);
+  --gold:#F0B90B;--silver:#9BACC8;--bronze:#C87941;
 }
-html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);font-size:14px;overflow:hidden;}
-
-/* ── LAYOUT ── */
-.shell{display:grid;grid-template-rows:56px 1fr;grid-template-columns:280px 1fr 320px;height:100vh;}
-.topbar{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;padding:0 20px;}
-.sidebar{grid-row:2;grid-column:1;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
-.main{grid-row:2;grid-column:2;display:flex;flex-direction:column;overflow:hidden;}
-.rightpanel{grid-row:2;grid-column:3;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 
 /* ── TOPBAR ── */
-.logo{font-size:18px;font-weight:700;color:var(--blaze);letter-spacing:-0.5px;display:flex;align-items:center;gap:8px;}
-.logo-dot{width:8px;height:8px;background:var(--blaze);border-radius:50%;animation:pulse 2s infinite;}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(1.4);}}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;}
+.logo{font-size:18px;font-weight:700;color:var(--blaze);display:flex;align-items:center;gap:8px;}
+.logo-dot{width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(1.5);}}
 .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
-.conn-status{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600;letter-spacing:0.5px;}
-.conn-status.connected{background:var(--greendim);color:var(--green);border:1px solid rgba(34,212,122,0.2);}
-.conn-status.disconnected{background:var(--reddim);color:var(--red);border:1px solid rgba(240,80,80,0.2);}
-.conn-status.connecting{background:var(--blazedim);color:var(--blaze);border:1px solid rgba(240,185,11,0.2);}
 .user-pill{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:4px 12px 4px 4px;}
 .user-pill img{width:26px;height:26px;border-radius:50%;object-fit:cover;}
 .user-pill .uname{font-size:13px;font-weight:600;}
-.btn{background:var(--blaze);color:#000;border:none;padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px;font-family:inherit;}
-.btn:hover{background:var(--blaze2);}
-.btn-sm{padding:5px 10px;font-size:11px;}
-.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--muted2);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit;}
-.btn-ghost:hover{border-color:var(--blaze);color:var(--blaze);}
-.btn-red{background:var(--reddim);border:1px solid rgba(240,80,80,0.2);color:var(--red);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;}
-.btn-red:hover{background:rgba(240,80,80,0.2);}
+.conn-pill{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600;}
+.conn-pill.on{background:var(--greendim);color:var(--green);border:1px solid rgba(34,212,122,.2);}
+.conn-pill.off{background:var(--reddim);color:var(--red);border:1px solid rgba(240,80,80,.2);}
 
-/* ── SIDEBAR ── */
-.sidebar-header{padding:16px;border-bottom:1px solid var(--border);}
-.sidebar-header label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;}
-.sidebar-header input{width:100%;background:var(--card);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:8px;font-size:12px;font-family:'JetBrains Mono',monospace;}
-.sidebar-header input:focus{outline:1px solid var(--blaze);}
-.sidebar-connect{padding:12px 16px;border-bottom:1px solid var(--border);}
-.sidebar-section{padding:12px 16px;flex:1;overflow-y:auto;}
-.section-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+/* ── HERO (non-joined state) ── */
+.hero{max-width:720px;margin:80px auto;padding:0 24px;text-align:center;}
+.hero h1{font-size:42px;font-weight:700;line-height:1.15;margin-bottom:16px;}
+.hero h1 span{color:var(--blaze);}
+.hero p{font-size:16px;color:var(--muted2);line-height:1.7;margin-bottom:32px;}
+.hero-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:40px;}
+.step{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 16px;text-align:left;}
+.step-num{font-size:11px;font-weight:700;color:var(--blaze);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.step h3{font-size:15px;font-weight:700;margin-bottom:6px;}
+.step p{font-size:12px;color:var(--muted2);line-height:1.5;}
+.hero-cta{background:var(--blaze);color:#000;border:none;padding:16px 32px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px;}
+.hero-cta:hover{background:var(--blaze2);}
+.hero-or{color:var(--muted);font-size:13px;margin:16px 0;}
+.hero-token{display:flex;gap:8px;max-width:480px;margin:0 auto;}
+.hero-token input{flex:1;background:var(--card);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:10px;font-size:13px;font-family:'JetBrains Mono',monospace;}
+.hero-token input:focus{outline:1px solid var(--blaze);}
 
-/* ── STATS GRID ── */
-.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;}
-.stat-card .sv{font-size:22px;font-weight:700;color:var(--text);line-height:1;}
-.stat-card .sl{font-size:10px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
-.stat-card.blaze{border-color:rgba(240,185,11,0.25);background:var(--blazedim);}
+/* ── DASHBOARD GRID ── */
+.dash{display:grid;grid-template-columns:260px 1fr 300px;grid-template-rows:auto 1fr;gap:0;height:calc(100vh - 56px);}
+.dash-sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+.dash-main{display:flex;flex-direction:column;overflow:hidden;}
+.dash-right{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+
+/* SIDEBAR */
+.sb-section{padding:16px;border-bottom:1px solid var(--border);}
+.sb-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;}
+.stat-card .sv{font-size:20px;font-weight:700;}
+.stat-card .sl{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
 .stat-card.blaze .sv{color:var(--blaze);}
-.stat-card.green{border-color:rgba(34,212,122,0.2);background:var(--greendim);}
 .stat-card.green .sv{color:var(--green);}
+.cmd-list{display:flex;flex-direction:column;gap:5px;}
+.cmd-item{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:12px;}
+.cmd-item code{color:var(--blaze);font-family:'JetBrains Mono',monospace;font-size:10px;}
+.cmd-item .cd{color:var(--muted2);font-size:10px;margin-top:1px;}
+.leave-btn{width:100%;background:var(--reddim);border:1px solid rgba(240,80,80,.2);color:var(--red);padding:10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;}
+.leave-btn:hover{background:rgba(240,80,80,.25);}
 
-/* ── COMMANDS ── */
-.cmd-list{display:flex;flex-direction:column;gap:6px;}
-.cmd-item{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;}
-.cmd-item code{color:var(--blaze);font-family:'JetBrains Mono',monospace;font-size:11px;}
-.cmd-item .cdesc{color:var(--muted2);font-size:11px;margin-top:2px;}
-
-/* ── MAIN AREA ── */
-.main-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);}
-.tab{padding:12px 18px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;}
+/* MAIN */
+.main-tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);}
+.tab{padding:12px 18px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;}
 .tab:hover{color:var(--text);}
 .tab.active{color:var(--blaze);border-bottom-color:var(--blaze);}
 .main-body{flex:1;overflow-y:auto;padding:20px;}
 
-/* ── LEADERBOARD ── */
-.lb-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+/* LEADERBOARD */
+.lb-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
 .lb-title{font-size:18px;font-weight:700;}
-.lb-subtitle{font-size:12px;color:var(--muted2);margin-top:2px;}
+.lb-sub{font-size:12px;color:var(--muted2);margin-top:2px;}
 .lb-list{display:flex;flex-direction:column;gap:8px;}
-.lb-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;transition:border-color 0.2s;}
-.lb-item:hover{border-color:var(--border2);}
-.lb-item.rank1{border-color:rgba(240,185,11,0.35);background:linear-gradient(90deg,rgba(240,185,11,0.06),transparent);}
-.lb-item.rank2{border-color:rgba(155,172,200,0.25);}
-.lb-item.rank3{border-color:rgba(200,121,65,0.25);}
-.rank-num{font-size:13px;font-weight:700;width:24px;text-align:center;flex-shrink:0;}
-.rank1 .rank-num{color:var(--gold);}
-.rank2 .rank-num{color:var(--silver);}
-.rank3 .rank-num{color:var(--bronze);}
-.lb-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--border2);}
+.lb-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;}
+.lb-item.r1{border-color:rgba(240,185,11,.35);background:linear-gradient(90deg,rgba(240,185,11,.06),transparent);}
+.lb-item.r2{border-color:rgba(155,172,200,.2);}
+.lb-item.r3{border-color:rgba(200,121,65,.2);}
+.rank-n{font-size:13px;font-weight:700;width:22px;text-align:center;flex-shrink:0;}
+.r1 .rank-n{color:var(--gold);} .r2 .rank-n{color:var(--silver);} .r3 .rank-n{color:var(--bronze);}
+.lb-av{width:36px;height:36px;border-radius:50%;object-fit:cover;background:var(--border2);flex-shrink:0;}
 .lb-info{flex:1;min-width:0;}
-.lb-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.lb-badges{display:flex;gap:4px;margin-top:3px;flex-wrap:wrap;}
-.badge{font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;}
-.badge-sub{background:var(--purpledim);color:var(--purple);border:1px solid rgba(155,108,245,0.2);}
-.badge-follower{background:var(--bluedim);color:var(--blue);border:1px solid rgba(76,142,245,0.2);}
-.badge-gift{background:var(--greendim);color:var(--green);border:1px solid rgba(34,212,122,0.2);}
-.badge-voter{background:var(--blazedim);color:var(--blaze);border:1px solid rgba(240,185,11,0.2);}
-.badge-mod{background:rgba(240,80,80,0.1);color:var(--red);border:1px solid rgba(240,80,80,0.2);}
-.badge-og{background:linear-gradient(90deg,rgba(240,185,11,0.15),rgba(155,108,245,0.15));color:var(--blaze2);border:1px solid rgba(240,185,11,0.3);}
+.lb-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lb-badges{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap;}
+.bdg{font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;text-transform:uppercase;}
+.bdg-sub{background:var(--purpledim);color:var(--purple);border:1px solid rgba(155,108,245,.2);}
+.bdg-fol{background:rgba(76,142,245,.1);color:var(--blue);border:1px solid rgba(76,142,245,.2);}
+.bdg-gift{background:var(--greendim);color:var(--green);border:1px solid rgba(34,212,122,.2);}
+.bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-top:5px;}
+.bar{height:100%;background:linear-gradient(90deg,var(--blaze),var(--blaze2));border-radius:2px;transition:width .5s;}
 .lb-score{text-align:right;flex-shrink:0;}
-.score-val{font-size:18px;font-weight:700;color:var(--blaze);font-family:'JetBrains Mono',monospace;}
-.score-label{font-size:9px;color:var(--muted);font-weight:600;text-transform:uppercase;}
-.score-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden;}
-.score-bar{height:100%;background:linear-gradient(90deg,var(--blaze),var(--blaze2));border-radius:2px;transition:width 0.5s ease;}
+.score-v{font-size:17px;font-weight:700;color:var(--blaze);font-family:'JetBrains Mono',monospace;}
+.score-l{font-size:9px;color:var(--muted);font-weight:600;text-transform:uppercase;}
 
-/* ── MILESTONES ── */
-.milestone-list{display:flex;flex-direction:column;gap:8px;}
-.milestone-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;}
-.milestone-icon{font-size:20px;width:36px;text-align:center;}
-.milestone-info{flex:1;}
-.milestone-name{font-size:13px;font-weight:600;}
-.milestone-desc{font-size:11px;color:var(--muted2);margin-top:2px;}
-.milestone-pts{font-size:13px;font-weight:700;color:var(--blaze);font-family:'JetBrains Mono',monospace;}
-
-/* ── ALERTS ── */
-.alert-feed{display:flex;flex-direction:column;gap:8px;}
-.alert-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px;animation:slidein 0.3s ease;}
-@keyframes slidein{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
-.alert-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
-.alert-body{flex:1;}
-.alert-msg{font-size:12px;line-height:1.5;}
-.alert-msg b{color:var(--blaze);}
-.alert-time{font-size:10px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono',monospace;}
+/* ALERTS */
+.alert-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;gap:10px;animation:slidein .3s ease;margin-bottom:8px;}
+@keyframes slidein{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+.alert-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+.alert-msg{font-size:12px;line-height:1.5;color:var(--muted2);}
+.alert-msg b{color:var(--text);}
+.alert-time{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;}
 .alert-item.follow{border-left:3px solid var(--blue);}
 .alert-item.sub{border-left:3px solid var(--purple);}
 .alert-item.gift{border-left:3px solid var(--green);}
-.alert-item.chat{border-left:3px solid var(--border2);}
-.alert-item.vote{border-left:3px solid var(--blaze);}
 .alert-item.milestone{border-left:3px solid var(--gold);background:var(--blazedim);}
-.alert-item.raid{border-left:3px solid var(--red);}
 .alert-item.stream{border-left:3px solid var(--green);}
+.alert-item.mod{border-left:3px solid var(--red);}
 
-/* ── CHAT (right panel) ── */
-.panel-header{padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between;}
+/* SHOP & SETTINGS TABS */
+.form-row{display:flex;gap:8px;margin-bottom:12px;align-items:flex-end;}
+.field{flex:1;}
+.field label{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+.field input,.field select{width:100%;background:var(--card);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:8px;font-size:13px;font-family:inherit;}
+.field input:focus,.field select:focus{outline:1px solid var(--blaze);}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;}
+.toggle-row .tl{font-size:13px;font-weight:600;}
+.toggle-row .td{font-size:11px;color:var(--muted2);margin-top:2px;}
+.toggle{width:42px;height:24px;background:var(--border2);border-radius:12px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;}
+.toggle.on{background:var(--blaze);}
+.toggle::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .2s;}
+.toggle.on::after{left:21px;}
+
+/* RIGHT PANEL - CHAT */
+.rp-header{padding:12px 16px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between;}
 .chat-feed{flex:1;overflow-y:auto;padding:10px;}
-.chat-msg{padding:6px 8px;border-radius:8px;margin-bottom:4px;font-size:12px;line-height:1.5;}
+.chat-msg{padding:5px 8px;border-radius:8px;margin-bottom:3px;font-size:12px;line-height:1.5;}
 .chat-msg:hover{background:var(--card);}
 .chat-sender{font-weight:700;margin-right:4px;}
 .chat-sender.owner{color:var(--blaze);}
-.chat-sender.moderator{color:var(--red);}
 .chat-sender.subscriber{color:var(--purple);}
-.chat-sender.vip{color:var(--green);}
-.chat-sender.og{color:var(--blaze2);}
+.chat-sender.moderator{color:var(--red);}
 .chat-text{color:var(--muted2);}
-.chat-bot-msg{background:var(--blazedim);border:1px solid rgba(240,185,11,0.15);border-radius:8px;padding:6px 8px;margin-bottom:4px;font-size:12px;}
-.chat-bot-sender{color:var(--blaze);font-weight:700;}
+.bot-msg{background:var(--blazedim);border:1px solid rgba(240,185,11,.15);border-radius:8px;padding:5px 8px;margin-bottom:3px;font-size:12px;}
 .chat-input-row{padding:10px;border-top:1px solid var(--border);display:flex;gap:8px;}
 .chat-input-row input{flex:1;background:var(--card);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:8px;font-size:12px;font-family:inherit;}
 .chat-input-row input:focus{outline:1px solid var(--blaze);}
 
-/* ── SETUP OVERLAY ── */
-#setup-overlay{position:fixed;inset:0;background:rgba(8,11,16,0.95);z-index:100;display:flex;align-items:center;justify-content:center;}
-.setup-card{background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:36px;max-width:480px;width:100%;}
-.setup-card h2{font-size:24px;font-weight:700;color:var(--blaze);margin-bottom:6px;}
-.setup-card p{color:var(--muted2);font-size:13px;line-height:1.6;margin-bottom:24px;}
-.setup-field{margin-bottom:16px;}
-.setup-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
-.setup-field input{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:10px 12px;border-radius:10px;font-size:13px;font-family:'JetBrains Mono',monospace;}
-.setup-field input:focus{outline:1px solid var(--blaze);}
-.setup-hint{font-size:11px;color:var(--muted);margin-top:4px;}
-.setup-divider{text-align:center;color:var(--muted);font-size:12px;margin:16px 0;position:relative;}
-.setup-divider::before,.setup-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border);}
-.setup-divider::before{left:0;} .setup-divider::after{right:0;}
+/* BUTTONS */
+.btn{background:var(--blaze);color:#000;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px;font-family:inherit;white-space:nowrap;}
+.btn:hover{background:var(--blaze2);}
+.btn-sm{padding:5px 10px;font-size:11px;}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--muted2);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit;}
+.btn-ghost:hover{border-color:var(--blaze);color:var(--blaze);}
 
-/* ── NOTIFICATION TOAST ── */
-#toast{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
-.toast-item{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:12px 16px;font-size:13px;min-width:280px;animation:toastin 0.3s ease;box-shadow:0 8px 30px rgba(0,0,0,0.4);}
-@keyframes toastin{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
-.toast-item.milestone{border-color:rgba(240,185,11,0.4);background:linear-gradient(90deg,rgba(240,185,11,0.1),var(--card));}
+/* SHOP TABLE */
+.shop-table{width:100%;border-collapse:collapse;font-size:12px;}
+.shop-table th{text-align:left;padding:8px 10px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+.shop-table td{padding:8px 10px;border-bottom:1px solid var(--border);}
+.shop-table tr:hover td{background:var(--card);}
 
-/* ── EMPTY STATE ── */
+/* EMPTY */
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;color:var(--muted);text-align:center;gap:8px;}
-.empty-icon{font-size:32px;opacity:0.4;}
-.empty-text{font-size:13px;}
+.empty-icon{font-size:28px;opacity:.4;}
 
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar{width:4px;height:4px;}
-::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+/* TOAST */
+#toast{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast-item{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:12px 16px;font-size:13px;min-width:260px;animation:toastin .3s ease;box-shadow:0 8px 30px rgba(0,0,0,.4);}
+@keyframes toastin{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+@media(max-width:900px){
+  .dash{grid-template-columns:1fr;grid-template-rows:auto;}
+  .dash-sidebar,.dash-right{display:none;}
+  .hero-steps{grid-template-columns:1fr;}
+}
 </style>
 </head>
 <body>
 
-<!-- SETUP OVERLAY -->
-<div id="setup-overlay">
-  <div class="setup-card">
-    <h2>⚡ Blaze Companion</h2>
-    <p>Stream loyalty intelligence for Blaze creators. Login with your Blaze account or paste a token to start tracking your most devoted community members in real time.</p>
-    <button class="btn" style="width:100%;padding:12px;font-size:14px;margin-bottom:16px;" onclick="startBlazeLogin()">⚡ Login with Blaze</button>
-    <div class="setup-divider">or paste token manually</div>
-    <div class="setup-field" style="margin-top:16px;">
-      <label>User Access Token</label>
-      <input id="setup-token" placeholder="Bearer token from Blaze OAuth">
-      <div class="setup-hint">Needs scopes: users.read, offline.access, channel.moderate, users.bot</div>
-    </div>
-    <div class="setup-field">
-      <label>Channel ID (UUID)</label>
-      <input id="setup-channel" placeholder="Your channel UUID">
-      <div class="setup-hint">Found in your Blaze channel settings or from /v1/users/profile</div>
-    </div>
-    <button class="btn" style="width:100%;padding:12px;font-size:14px;" onclick="startWithToken()">Connect →</button>
-    <div style="margin-top:12px;font-size:11px;color:var(--muted);text-align:center;">Client ID: UR4ghwgTTJ2rAE1_KBZgmCKmkvQtO4ux</div>
+<div class="topbar">
+  <div class="logo"><div class="logo-dot"></div> Blaze Companion</div>
+  <div class="topbar-right">
+    <div id="conn-pill" class="conn-pill off">Not Connected</div>
+    <div id="user-area"></div>
+    <button class="btn-ghost" id="logout-btn" style="display:none" onclick="logout()">Logout</button>
   </div>
 </div>
 
-<!-- APP SHELL -->
-<div class="shell">
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <div class="logo"><div class="logo-dot"></div> Blaze Companion</div>
-    <div style="width:1px;height:24px;background:var(--border);margin:0 4px;"></div>
-    <div id="channel-label" style="font-size:13px;color:var(--muted2);">Not connected</div>
-    <div class="topbar-right">
-      <div id="conn-status" class="conn-status disconnected">Disconnected</div>
-      <div id="user-area"></div>
-      <button class="btn-ghost" onclick="showSetup()">⚙ Setup</button>
-    </div>
-  </div>
-
-  <!-- SIDEBAR -->
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <label>Channel ID</label>
-      <input id="channel-id-input" placeholder="UUID" oninput="onChannelIdChange()">
-    </div>
-    <div class="sidebar-connect">
-      <button class="btn" style="width:100%;" id="connect-btn" onclick="connectSocket()">Connect to Channel</button>
-    </div>
-    <div class="sidebar-section" style="overflow-y:auto;flex:1;">
-      <div class="section-label" style="margin-bottom:8px;">Live Stats</div>
-      <div class="stat-grid">
-        <div class="stat-card blaze"><div class="sv" id="stat-chatters">0</div><div class="sl">Chatters</div></div>
-        <div class="stat-card"><div class="sv" id="stat-msgs">0</div><div class="sl">Messages</div></div>
-        <div class="stat-card green"><div class="sv" id="stat-follows">0</div><div class="sl">Follows</div></div>
-        <div class="stat-card"><div class="sv" id="stat-subs">0</div><div class="sl">Subs</div></div>
-        <div class="stat-card"><div class="sv" id="stat-gifts">0</div><div class="sl">Gifts</div></div>
-        <div class="stat-card blaze"><div class="sv" id="stat-votes">0</div><div class="sl">Votes</div></div>
+<!-- HERO (shown when not joined) -->
+<div id="hero-view">
+  <div class="hero">
+    <h1>The smartest bot<br>on <span>Blaze.stream</span></h1>
+    <p>Loyalty tracking, mini games, polls, custom commands, loyalty shop, phrase tracking, spam protection and more — all free. Type <strong style="color:var(--blaze)">!join</strong> in our chat or connect below.</p>
+    <div class="hero-steps">
+      <div class="step">
+        <div class="step-num">Step 1</div>
+        <h3>Follow Us on Blaze</h3>
+        <p>Visit <strong style="color:var(--blaze)">blaze.stream/BlazeCompanion</strong> and follow the channel — required to use !join.</p>
       </div>
-      <div class="section-label" style="margin-top:16px;margin-bottom:8px;">Bot Commands</div>
-      <div class="cmd-list">
-        <div class="cmd-item"><code>!devoted</code><div class="cdesc">Top 5 most loyal chatters</div></div>
-        <div class="cmd-item"><code>!loyalty @user</code><div class="cdesc">Their rank & devotion score</div></div>
-        <div class="cmd-item"><code>!shoutout @user</code><div class="cdesc">Auto-shoutout with their stats</div></div>
-        <div class="cmd-item"><code>!milestone @user</code><div class="cdesc">Their next loyalty milestone</div></div>
-        <div class="cmd-item"><code>!leaderboard</code><div class="cdesc">Post top 3 in chat</div></div>
-        <div class="cmd-item"><code>!hug @user</code><div class="cdesc">Warm shoutout + score</div></div>
-        <div class="cmd-item"><code>!uptime</code><div class="cdesc">Bot uptime</div></div>
+      <div class="step">
+        <div class="step-num">Step 2</div>
+        <h3>Type !join in chat</h3>
+        <p>Type <strong style="color:var(--blaze)">!join</strong> in our Blaze chat and the bot will immediately enter your channel.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">Step 3</div>
+        <h3>Mod the bot</h3>
+        <p>Type <strong style="color:var(--blaze)">/mod BlazeCompanion</strong> in your chat to unlock full moderation features.</p>
       </div>
     </div>
-  </div>
-
-  <!-- MAIN -->
-  <div class="main">
-    <div class="main-tabs">
-      <div class="tab active" onclick="switchTab('leaderboard',this)">🏆 Loyalty Board</div>
-      <div class="tab" onclick="switchTab('alerts',this)">🔔 Live Alerts</div>
-      <div class="tab" onclick="switchTab('milestones',this)">⭐ Milestones</div>
-    </div>
-    <div class="main-body" id="main-body">
-      <!-- LEADERBOARD TAB -->
-      <div id="tab-leaderboard">
-        <div class="lb-header">
-          <div>
-            <div class="lb-title">Devotion Leaderboard</div>
-            <div class="lb-subtitle">Scored by chats, follows, subs, gifts & votes · updates live</div>
-          </div>
-          <button class="btn btn-sm" onclick="postLeaderboardToChat()">Post to Chat</button>
-        </div>
-        <div class="lb-list" id="lb-list">
-          <div class="empty"><div class="empty-icon">🎯</div><div class="empty-text">Connect to a channel to start tracking loyalty</div></div>
-        </div>
-      </div>
-
-      <!-- ALERTS TAB -->
-      <div id="tab-alerts" style="display:none;">
-        <div class="lb-header">
-          <div>
-            <div class="lb-title">Live Event Feed</div>
-            <div class="lb-subtitle">Every channel event in real time</div>
-          </div>
-          <button class="btn-ghost" onclick="clearAlerts()">Clear</button>
-        </div>
-        <div class="alert-feed" id="alert-feed">
-          <div class="empty"><div class="empty-icon">📡</div><div class="empty-text">Waiting for events…</div></div>
-        </div>
-      </div>
-
-      <!-- MILESTONES TAB -->
-      <div id="tab-milestones" style="display:none;">
-        <div class="lb-header">
-          <div>
-            <div class="lb-title">Loyalty Milestones</div>
-            <div class="lb-subtitle">Devotion score thresholds that unlock recognition</div>
-          </div>
-        </div>
-        <div class="milestone-list">
-          <div class="milestone-item"><div class="milestone-icon">👀</div><div class="milestone-info"><div class="milestone-name">Lurker</div><div class="milestone-desc">First message in channel</div></div><div class="milestone-pts">10 pts</div></div>
-          <div class="milestone-item"><div class="milestone-icon">💬</div><div class="milestone-info"><div class="milestone-name">Regular</div><div class="milestone-desc">50+ messages sent</div></div><div class="milestone-pts">100 pts</div></div>
-          <div class="milestone-item"><div class="milestone-icon">⭐</div><div class="milestone-info"><div class="milestone-name">Devoted</div><div class="milestone-desc">200+ messages or subscribed</div></div><div class="milestone-pts">250 pts</div></div>
-          <div class="milestone-item"><div class="milestone-icon">🔥</div><div class="milestone-info"><div class="milestone-name">Fanatic</div><div class="milestone-desc">500+ messages or gifted subs</div></div><div class="milestone-pts">500 pts</div></div>
-          <div class="milestone-item"><div class="milestone-icon">💎</div><div class="milestone-info"><div class="milestone-name">Diamond</div><div class="milestone-desc">1000+ messages + subscribed</div></div><div class="milestone-pts">1000 pts</div></div>
-          <div class="milestone-item"><div class="milestone-icon">👑</div><div class="milestone-info"><div class="milestone-name">Legend</div><div class="milestone-desc">Top chatter + sub + gifts</div></div><div class="milestone-pts">2000 pts</div></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- RIGHT PANEL — LIVE CHAT -->
-  <div class="rightpanel">
-    <div class="panel-header">
-      Live Chat
-      <button class="btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="clearChat()">Clear</button>
-    </div>
-    <div class="chat-feed" id="chat-feed">
-      <div class="empty"><div class="empty-icon">💬</div><div class="empty-text">Chat will appear here</div></div>
-    </div>
-    <div class="chat-input-row">
-      <input id="chat-input" placeholder="Send as bot…" onkeydown="if(event.key==='Enter')sendBotMessage()">
-      <button class="btn btn-sm" onclick="sendBotMessage()">Send</button>
+    <button class="hero-cta" onclick="startOAuth()">⚡ Login with Blaze to manage your dashboard</button>
+    <div class="hero-or">or paste token manually</div>
+    <div class="hero-token">
+      <input id="manual-token" placeholder="Paste access token">
+      <input id="manual-channel" placeholder="Channel UUID">
+      <button class="btn" onclick="manualConnect()">Connect</button>
     </div>
   </div>
 </div>
 
-<!-- TOAST CONTAINER -->
+<!-- DASHBOARD (shown when joined) -->
+<div id="dash-view" style="display:none;">
+  <div class="dash">
+    <!-- SIDEBAR -->
+    <div class="dash-sidebar">
+      <div class="sb-section">
+        <div class="sb-label">Live Stats</div>
+        <div class="stat-grid">
+          <div class="stat-card blaze"><div class="sv" id="s-chatters">0</div><div class="sl">Chatters</div></div>
+          <div class="stat-card"><div class="sv" id="s-msgs">0</div><div class="sl">Messages</div></div>
+          <div class="stat-card green"><div class="sv" id="s-follows">0</div><div class="sl">Follows</div></div>
+          <div class="stat-card"><div class="sv" id="s-subs">0</div><div class="sl">Subs</div></div>
+          <div class="stat-card"><div class="sv" id="s-gifts">0</div><div class="sl">Gifts</div></div>
+          <div class="stat-card blaze"><div class="sv" id="s-votes">0</div><div class="sl">Votes</div></div>
+        </div>
+      </div>
+      <div class="sb-section" style="flex:1;overflow-y:auto;">
+        <div class="sb-label">Bot Commands</div>
+        <div class="cmd-list">
+          <div class="cmd-item"><code>!devoted</code><div class="cd">Top 5 loyal chatters</div></div>
+          <div class="cmd-item"><code>!loyalty [@user]</code><div class="cd">Rank & devotion score</div></div>
+          <div class="cmd-item"><code>!shoutout @user</code><div class="cd">Auto shoutout with stats</div></div>
+          <div class="cmd-item"><code>!balance [@user]</code><div class="cd">Point balance</div></div>
+          <div class="cmd-item"><code>!leaderboard</code><div class="cd">Post top 3 in chat</div></div>
+          <div class="cmd-item"><code>!shop</code><div class="cd">View loyalty shop</div></div>
+          <div class="cmd-item"><code>!buy slug</code><div class="cd">Redeem shop item</div></div>
+          <div class="cmd-item"><code>!so @user</code><div class="cd">Shoutout + latest clip</div></div>
+          <div class="cmd-item"><code>!brb [mins]</code><div class="cd">BRB mode</div></div>
+          <div class="cmd-item"><code>!poll Q? | A | B</code><div class="cd">Run a poll</div></div>
+          <div class="cmd-item"><code>!setphrase word</code><div class="cd">Track a phrase</div></div>
+          <div class="cmd-item"><code>!addcmd !cmd text</code><div class="cd">Custom command</div></div>
+          <div class="cmd-item"><code>!addtimer 30 msg</code><div class="cd">Timed message</div></div>
+          <div class="cmd-item"><code>!games</code><div class="cd">coinflip, roll, rps, trivia, heist</div></div>
+          <div class="cmd-item"><code>!leave</code><div class="cd">Remove bot from channel</div></div>
+        </div>
+      </div>
+      <div class="sb-section">
+        <button class="leave-btn" onclick="leaveBot()">⚠ Remove Bot from Channel</button>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="dash-main">
+      <div class="main-tabs">
+        <div class="tab active" onclick="switchTab('lb',this)">🏆 Loyalty Board</div>
+        <div class="tab" onclick="switchTab('alerts',this)">🔔 Live Alerts</div>
+        <div class="tab" onclick="switchTab('shop',this)">🛒 Shop</div>
+        <div class="tab" onclick="switchTab('settings',this)">⚙ Settings</div>
+      </div>
+      <div class="main-body" id="main-body">
+
+        <!-- LEADERBOARD -->
+        <div id="tab-lb">
+          <div class="lb-header">
+            <div><div class="lb-title">Devotion Leaderboard</div><div class="lb-sub">Scored live by chats, follows, subs, gifts & votes</div></div>
+            <button class="btn btn-sm" onclick="postLeaderboard()">Post to Chat</button>
+          </div>
+          <div class="lb-list" id="lb-list"><div class="empty"><div class="empty-icon">🎯</div><div>Waiting for chat activity…</div></div></div>
+        </div>
+
+        <!-- ALERTS -->
+        <div id="tab-alerts" style="display:none;">
+          <div class="lb-header">
+            <div><div class="lb-title">Live Event Feed</div><div class="lb-sub">Every channel event in real time</div></div>
+            <button class="btn-ghost" onclick="document.getElementById('alert-feed').innerHTML=''">Clear</button>
+          </div>
+          <div id="alert-feed"></div>
+        </div>
+
+        <!-- SHOP -->
+        <div id="tab-shop" style="display:none;">
+          <div class="lb-header"><div><div class="lb-title">Loyalty Shop</div><div class="lb-sub">Viewers spend points to redeem rewards</div></div></div>
+          <div class="form-row" style="margin-bottom:20px;">
+            <div class="field"><label>Item Slug</label><input id="shop-slug" placeholder="shoutout"></div>
+            <div class="field"><label>Item Name</label><input id="shop-name" placeholder="Channel Shoutout"></div>
+            <div class="field" style="max-width:100px;"><label>Cost</label><input id="shop-cost" type="number" placeholder="200"></div>
+            <div class="field" style="max-width:80px;"><label>Stock (-1=∞)</label><input id="shop-stock" type="number" value="-1"></div>
+            <button class="btn" style="align-self:flex-end;" onclick="addShopItem()">Add Item</button>
+          </div>
+          <table class="shop-table">
+            <thead><tr><th>Name</th><th>Slug</th><th>Cost</th><th>Stock</th><th>Active</th></tr></thead>
+            <tbody id="shop-tbody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No items yet</td></tr></tbody>
+          </table>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="tab-settings" style="display:none;">
+          <div class="lb-title" style="margin-bottom:20px;">Channel Settings</div>
+          <div class="form-row">
+            <div class="field"><label>Currency Name</label><input id="set-currency" placeholder="points"></div>
+            <button class="btn" onclick="saveCurrency()">Save</button>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Tracked Phrase</label><input id="set-phrase" placeholder="GG / hype / etc"></div>
+            <button class="btn" onclick="savePhrase()">Set Phrase</button>
+          </div>
+          <div style="margin-top:20px;">
+            <div class="toggle-row">
+              <div><div class="tl">Spam Protection</div><div class="td">Auto-ban known spam bots</div></div>
+              <div class="toggle on" id="tog-spam" onclick="toggleSetting('spam',this)"></div>
+            </div>
+            <div class="toggle-row">
+              <div><div class="tl">Event Announcements</div><div class="td">Bot announces follows, subs, gifts in chat</div></div>
+              <div class="toggle on" id="tog-events" onclick="toggleSetting('events',this)"></div>
+            </div>
+          </div>
+          <div style="margin-top:24px;">
+            <div class="lb-title" style="font-size:15px;margin-bottom:12px;">Custom Commands</div>
+            <div class="form-row">
+              <div class="field"><label>Trigger</label><input id="cmd-trigger" placeholder="!discord"></div>
+              <div class="field"><label>Response ({user} = username)</label><input id="cmd-response" placeholder="Join our Discord: https://..."></div>
+              <button class="btn" onclick="addCmd()">Add</button>
+            </div>
+            <div id="cmd-list-area"></div>
+          </div>
+          <div style="margin-top:24px;">
+            <div class="lb-title" style="font-size:15px;margin-bottom:12px;">Timed Messages</div>
+            <div class="form-row">
+              <div class="field" style="max-width:100px;"><label>Every (mins)</label><input id="timer-mins" type="number" placeholder="30" value="30"></div>
+              <div class="field"><label>Message</label><input id="timer-msg" placeholder="Follow us for more content!"></div>
+              <button class="btn" onclick="addTimer()">Add</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT: LIVE CHAT -->
+    <div class="dash-right">
+      <div class="rp-header">Live Chat <button class="btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="document.getElementById('chat-feed').innerHTML=''">Clear</button></div>
+      <div class="chat-feed" id="chat-feed"><div class="empty"><div class="empty-icon">💬</div><div>Chat appears here</div></div></div>
+      <div class="chat-input-row">
+        <input id="chat-input" placeholder="Send as bot…" onkeydown="if(event.key==='Enter')sendBotMsg()">
+        <button class="btn btn-sm" onclick="sendBotMsg()">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 // ── CONFIG ──
-const CLIENT_ID = 'UR4ghwgTTJ2rAE1_KBZgmCKmkvQtO4ux';
+const BOT_URL    = 'https://hotemin.onrender.com';
+const CLIENT_ID  = 'UR4ghwgTTJ2rAE1_KBZgmCKmkvQtO4ux';
 const CLIENT_SECRET = 'IFwFHaqzi_sA0FfJ9nWiQSR0ug3GPUWZMr0qw3LvMZ0';
-const API = 'https://api.blaze.stream/v1';
-const REDIRECT = window.location.href.split('?')[0];
+const REDIRECT   = window.location.href.split('?')[0];
+// Updated scopes — add channel.follow so bot can follow streamers
+const SCOPES     = ['users.read','offline.access','channel.moderate','users.bot','channel.follow'];
 
-// ── STATE ──
 let accessToken = '';
-let channelId = '';
-let userId = '';
-let socket = null;
-let socketSessionId = '';
-let connectedAt = Date.now();
-let stats = { chatters:0, msgs:0, follows:0, subs:0, gifts:0, votes:0 };
-let loyalty = {}; // userId -> { username, displayName, avatarUrl, score, msgs, follows, subs, gifts, votes, isSubscriber, isFollower, lastSeen, milestone }
-let alertsCleared = false;
-
-// ── SCORING ──
-const SCORES = { msg:1, follow:10, sub:50, gift:30, vote:5 };
-const MILESTONES = [
-  { pts:10, name:'Lurker', icon:'👀' },
-  { pts:100, name:'Regular', icon:'💬' },
-  { pts:250, name:'Devoted', icon:'⭐' },
-  { pts:500, name:'Fanatic', icon:'🔥' },
-  { pts:1000, name:'Diamond', icon:'💎' },
-  { pts:2000, name:'Legend', icon:'👑' }
-];
-
-function getMilestone(score) {
-  let m = MILESTONES[0];
-  for (const ms of MILESTONES) { if (score >= ms.pts) m = ms; }
-  return m;
-}
-function getNextMilestone(score) {
-  for (const ms of MILESTONES) { if (score < ms.pts) return ms; }
-  return null;
-}
-
-function addScore(uid, username, displayName, avatarUrl, type, amount=1, meta={}) {
-  if (!uid) return;
-  if (!loyalty[uid]) {
-    loyalty[uid] = { username, displayName, avatarUrl, score:0, msgs:0, follows:0, subs:0, gifts:0, votes:0,
-      isSubscriber:false, isFollower:false, lastSeen:Date.now(), milestone:MILESTONES[0] };
-    stats.chatters = Object.keys(loyalty).length;
-    document.getElementById('stat-chatters').textContent = stats.chatters;
-  }
-  const u = loyalty[uid];
-  u.username = username || u.username;
-  u.displayName = displayName || u.displayName;
-  u.avatarUrl = avatarUrl || u.avatarUrl;
-  u.lastSeen = Date.now();
-  if (meta.isSubscriber !== undefined) u.isSubscriber = meta.isSubscriber;
-  if (meta.isFollower !== undefined) u.isFollower = meta.isFollower;
-
-  const prev = getMilestone(u.score);
-  const pts = SCORES[type] * amount;
-  u.score += pts;
-  u[type === 'msg' ? 'msgs' : type+'s'] = (u[type === 'msg' ? 'msgs' : type+'s'] || 0) + amount;
-
-  const next = getMilestone(u.score);
-  if (next.pts > prev.pts) {
-    // Milestone reached!
-    u.milestone = next;
-    pushAlert('milestone', `🎉 <b>${u.displayName||u.username}</b> reached <b>${next.icon} ${next.name}</b> (${u.score} pts)!`, '🏆');
-    toast(`${next.icon} ${u.displayName||u.username} is now a ${next.name}!`, true);
-    if (accessToken && channelId) {
-      sendChat(`🏆 ${next.icon} @${u.username} just reached ${next.name} status with ${u.score} loyalty points! Congrats!`);
-    }
-  }
-  renderLeaderboard();
-}
+let channelId   = '';
+let pollTimer   = null;
+let lastAlertId = 0;
 
 // ── OAUTH ──
-async function startBlazeLogin() {
+async function startOAuth() {
   try {
-    const res = await fetch('https://blaze.stream/bapi/oauth2/generate-auth-url', {
+    const res  = await fetch('https://blaze.stream/bapi/oauth2/generate-auth-url', {
       method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify({ clientId:CLIENT_ID, clientSecret:CLIENT_SECRET, redirectUri:REDIRECT,
-        scopes:['users.read','offline.access','channel.moderate','users.bot'] })
+      body: JSON.stringify({ clientId:CLIENT_ID, clientSecret:CLIENT_SECRET, redirectUri:REDIRECT, scopes:SCOPES })
     });
     const data = await res.json();
     if (data.url) {
       sessionStorage.setItem('bc_state', data.state);
       sessionStorage.setItem('bc_verifier', data.codeVerifier);
       window.location.href = data.url;
-    } else { toast('Auth URL error: ' + JSON.stringify(data)); }
+    } else { toast('OAuth error: ' + JSON.stringify(data)); }
   } catch(e) { toast('Login failed: ' + e.message); }
 }
 
 async function handleCallback() {
   const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
+  const code   = params.get('code');
   if (!code) return;
   window.history.replaceState({}, '', window.location.pathname);
-
-  const verifier = sessionStorage.getItem('bc_verifier') || '';
   try {
-    const res = await fetch('https://blaze.stream/bapi/oauth2/token', {
+    const res  = await fetch('https://blaze.stream/bapi/oauth2/token', {
       method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify({ clientId:CLIENT_ID, clientSecret:CLIENT_SECRET, code, codeVerifier:verifier,
-        redirectUri:REDIRECT, grantType:'authorization_code' })
+      body: JSON.stringify({ clientId:CLIENT_ID, clientSecret:CLIENT_SECRET, code,
+        codeVerifier: sessionStorage.getItem('bc_verifier')||'', redirectUri:REDIRECT, grantType:'authorization_code' })
     });
     const data = await res.json();
     if (data.accessToken) {
       accessToken = data.accessToken;
       sessionStorage.setItem('bc_token', accessToken);
       if (data.refreshToken) sessionStorage.setItem('bc_refresh', data.refreshToken);
-      await loadUserProfile();
-      document.getElementById('setup-overlay').style.display = 'none';
-      toast('✅ Logged in with Blaze!');
+      await loadProfile();
     }
-  } catch(e) { toast('Token exchange failed: ' + e.message); }
+  } catch(e) { toast('Token exchange failed'); }
 }
 
-async function loadUserProfile() {
+async function loadProfile() {
   try {
-    const res = await fetch(`${API}/users/profile`, {
+    const res  = await fetch('https://api.blaze.stream/v1/users/profile', {
       headers:{ 'client-id':CLIENT_ID, 'authorization':`Bearer ${accessToken}`, 'content-type':'application/json' }
     });
     const data = await res.json();
-    const u = data.data || data;
-    if (u && (u.username || u.displayName)) {
-      userId = u.id || u.userId || '';
-      // Auto-set channelId to user's own channel
-      if (!channelId && userId) {
-        channelId = userId;
-        document.getElementById('channel-id-input').value = channelId;
-        document.getElementById('setup-channel').value = channelId;
-      }
+    const u    = data.data || data;
+    if (u?.username) {
+      channelId = u.id || u.userId || '';
+      sessionStorage.setItem('bc_channel', channelId);
+      // Show user pill
       document.getElementById('user-area').innerHTML = `
         <div class="user-pill">
           ${u.avatarUrl ? `<img src="${u.avatarUrl}" onerror="this.style.display='none'">` : ''}
-          <span class="uname">${u.displayName||u.username}</span>
+          <span class="uname">@${u.username}</span>
         </div>`;
-      document.getElementById('channel-label').textContent = `@${u.username}`;
+      document.getElementById('logout-btn').style.display = '';
+      // Check if bot is already in their channel
+      await checkBotStatus();
     }
-  } catch(e) {}
+  } catch(e) { console.error(e); }
 }
 
-function startWithToken() {
-  const t = document.getElementById('setup-token').value.trim();
-  const ch = document.getElementById('setup-channel').value.trim();
-  if (!t) { toast('Paste your access token'); return; }
-  accessToken = t;
-  if (ch) { channelId = ch; document.getElementById('channel-id-input').value = ch; }
-  sessionStorage.setItem('bc_token', t);
-  if (ch) sessionStorage.setItem('bc_channel', ch);
-  loadUserProfile().then(() => {
-    document.getElementById('setup-overlay').style.display = 'none';
-    if (channelId) connectSocket();
-  });
-}
-
-function showSetup() { document.getElementById('setup-overlay').style.display = 'flex'; }
-function onChannelIdChange() { channelId = document.getElementById('channel-id-input').value.trim(); }
-
-// ── BACKEND CONNECTION ──
-const BOT_URL = 'https://hotemin.onrender.com';
-
-async function connectSocket() {
-  channelId = document.getElementById('channel-id-input').value.trim() || channelId;
-  if (!channelId) { toast('Enter a Channel ID first'); return; }
-  if (!accessToken) { toast('Login with Blaze first'); return; }
-
-  setConnStatus('connecting');
-  document.getElementById('connect-btn').textContent = 'Connecting…';
-
+async function checkBotStatus() {
   try {
-    const res = await fetch(`${BOT_URL}/api/connect`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
+    const res  = await fetch(`${BOT_URL}/api/state?channelId=${channelId}`);
+    const data = await res.json();
+    if (data.connected || data.topUsers?.length >= 0) {
+      showDashboard();
+      startPolling();
+    }
+    // else show hero — bot not in their channel yet
+  } catch { /* show hero */ }
+}
+
+function manualConnect() {
+  const t  = document.getElementById('manual-token').value.trim();
+  const ch = document.getElementById('manual-channel').value.trim();
+  if (!t || !ch) { toast('Paste both token and channel ID'); return; }
+  accessToken = t; channelId = ch;
+  sessionStorage.setItem('bc_token', t);
+  sessionStorage.setItem('bc_channel', ch);
+  connectToBot();
+}
+
+async function connectToBot() {
+  try {
+    const res  = await fetch(`${BOT_URL}/api/connect`, {
+      method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify({ token: accessToken, channelId })
     });
     const data = await res.json();
-    if (data.ok) {
-      document.getElementById('connect-btn').textContent = 'Connected ✓';
-      document.getElementById('channel-label').textContent = channelId.slice(0,8) + '…';
-      connectedAt = Date.now();
-      pushAlert('stream', '✅ Bot connected on Render — tracking loyalty 24/7 even when this tab is closed!', '⚡');
-      startPolling();
-    } else {
-      toast('Connect failed: ' + JSON.stringify(data));
-      document.getElementById('connect-btn').textContent = 'Connect to Channel';
-      setConnStatus('disconnected');
-    }
-  } catch(e) {
-    toast('Cannot reach bot at ' + BOT_URL);
-    document.getElementById('connect-btn').textContent = 'Connect to Channel';
-    setConnStatus('disconnected');
-  }
+    if (data.ok) { showDashboard(); startPolling(); toast('✅ Bot connected!'); }
+    else { toast('Connect failed: ' + JSON.stringify(data)); }
+  } catch(e) { toast('Cannot reach bot: ' + e.message); }
 }
 
-// ── POLL BACKEND FOR STATE every 3s ──
-let pollTimer = null;
+function showDashboard() {
+  document.getElementById('hero-view').style.display = 'none';
+  document.getElementById('dash-view').style.display = 'block';
+}
+
+function showHero() {
+  document.getElementById('hero-view').style.display = 'block';
+  document.getElementById('dash-view').style.display = 'none';
+}
+
+// ── POLLING ──
 function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(pollState, 3000);
@@ -554,345 +493,218 @@ async function pollState() {
     if (!res.ok) return;
     const data = await res.json();
 
-    setConnStatus(data.connected ? 'connected' : 'disconnected');
+    // Conn status
+    const pill = document.getElementById('conn-pill');
+    pill.textContent = data.connected ? '● Live' : '○ Offline';
+    pill.className   = 'conn-pill ' + (data.connected ? 'on' : 'off');
 
-    // Sync stats
+    // Stats
     if (data.stats) {
-      stats = data.stats;
-      document.getElementById('stat-chatters').textContent = stats.chatters;
-      document.getElementById('stat-msgs').textContent     = stats.msgs;
-      document.getElementById('stat-follows').textContent  = stats.follows;
-      document.getElementById('stat-subs').textContent     = stats.subs;
-      document.getElementById('stat-gifts').textContent    = stats.gifts;
-      document.getElementById('stat-votes').textContent    = stats.votes;
+      document.getElementById('s-chatters').textContent = data.stats.chatters;
+      document.getElementById('s-msgs').textContent     = data.stats.msgs;
+      document.getElementById('s-follows').textContent  = data.stats.follows;
+      document.getElementById('s-subs').textContent     = data.stats.subs;
+      document.getElementById('s-gifts').textContent    = data.stats.gifts;
+      document.getElementById('s-votes').textContent    = data.stats.votes;
     }
 
-    // Sync loyalty leaderboard
-    if (data.topUsers) {
-      loyalty = {};
-      data.topUsers.forEach(u => { loyalty[u.id] = u; });
-      renderLeaderboard();
-    }
+    // Leaderboard
+    if (data.topUsers) renderLeaderboard(data.topUsers);
 
-    // Sync alerts feed
-    if (data.alerts && data.alerts.length) {
+    // Alerts — only new ones
+    if (data.alerts?.length) {
       const feed = document.getElementById('alert-feed');
       feed.querySelectorAll('.empty').forEach(e => e.remove());
+      // Re-render all (server already sorted newest first, max 50)
       feed.innerHTML = data.alerts.map(a => `
         <div class="alert-item ${a.type}">
           <div class="alert-icon">${a.icon}</div>
-          <div class="alert-body">
-            <div class="alert-msg">${escHtml(a.message)}</div>
-            <div class="alert-time">${new Date(a.time).toLocaleTimeString()}</div>
+          <div>
+            <div class="alert-msg">${esc(a.message)}</div>
+            <div class="alert-time">${new Date(a.created_at||a.time).toLocaleTimeString()}</div>
           </div>
         </div>`).join('');
     }
-  } catch(e) {
-    setConnStatus('disconnected');
-  }
+  } catch {}
 }
 
-// ── EVENT HANDLER ──
-function handleEvent(type, payload) {
-  switch(type) {
-    case 'channel.chat.message': {
-      const { sender, message } = payload;
-      stats.msgs++;
-      document.getElementById('stat-msgs').textContent = stats.msgs;
-      addScore(sender.id, sender.username, sender.displayName, sender.avatarUrl, 'msg', 1, {
-        isSubscriber: sender.isSubscriber, isFollower: sender.isFollower
-      });
-      addChatMessage(sender, message);
-      // Bot commands
-      if (message.startsWith('!')) handleBotCommand(message, sender);
-      break;
-    }
-    case 'channel.follow': {
-      const { follower } = payload;
-      stats.follows++;
-      document.getElementById('stat-follows').textContent = stats.follows;
-      addScore(follower.id, follower.username, follower.displayName, follower.avatarUrl, 'follow', 1, { isFollower:true });
-      pushAlert('follow', `<b>${follower.displayName||follower.username}</b> followed the channel! (+10 pts)`, '💙');
-      toast(`💙 ${follower.displayName||follower.username} followed!`);
-      break;
-    }
-    case 'channel.subscribe': {
-      const { subscriber } = payload;
-      stats.subs++;
-      document.getElementById('stat-subs').textContent = stats.subs;
-      addScore(subscriber.id, subscriber.username, subscriber.displayName, subscriber.avatarUrl, 'sub', 1, { isSubscriber:true });
-      pushAlert('sub', `<b>${subscriber.displayName||subscriber.username}</b> subscribed! (+50 pts)`, '💜');
-      toast(`💜 ${subscriber.displayName||subscriber.username} subscribed!`);
-      break;
-    }
-    case 'channel.subscription.gift': {
-      const { sender, giftCount } = payload;
-      stats.gifts += giftCount;
-      document.getElementById('stat-gifts').textContent = stats.gifts;
-      addScore(sender.id, sender.username, sender.displayName, sender.avatarUrl, 'gift', giftCount);
-      pushAlert('gift', `<b>${sender.displayName||sender.username}</b> gifted <b>${giftCount}</b> sub${giftCount>1?'s':''}! (+${SCORES.gift*giftCount} pts)`, '🎁');
-      toast(`🎁 ${sender.displayName||sender.username} gifted ${giftCount} subs!`);
-      break;
-    }
-    case 'channel.vote': {
-      const { voter, amount } = payload;
-      stats.votes += amount;
-      document.getElementById('stat-votes').textContent = stats.votes;
-      addScore(voter.id, voter.username, voter.displayName, voter.avatarUrl, 'vote', 1);
-      pushAlert('vote', `<b>${voter.displayName||voter.username}</b> voted (${amount})! (+${SCORES.vote} pts)`, '⚡');
-      break;
-    }
-    case 'channel.unfollow': {
-      const { follower } = payload;
-      // Reduce score slightly
-      if (loyalty[follower.id]) { loyalty[follower.id].score = Math.max(0, loyalty[follower.id].score - 5); loyalty[follower.id].isFollower=false; renderLeaderboard(); }
-      pushAlert('follow', `<b>${follower.displayName||follower.username}</b> unfollowed.`, '💔');
-      break;
-    }
-    case 'channel.raid': {
-      const { raider } = payload;
-      pushAlert('raid', `🚨 <b>${raider.displayName||raider.username}</b> is raiding!`, '🚨');
-      toast(`🚨 RAID from ${raider.displayName||raider.username}!`, true);
-      break;
-    }
-    case 'channel.ban': {
-      const { bannedUser } = payload;
-      pushAlert('sub', `<b>${bannedUser.displayName||bannedUser.username}</b> was banned.`, '🔨');
-      break;
-    }
-    case 'channel.unban': {
-      const { unbannedUser } = payload;
-      pushAlert('follow', `<b>${unbannedUser.displayName||unbannedUser.username}</b> was unbanned.`, '✅');
-      break;
-    }
-    case 'stream.online': {
-      pushAlert('stream', `🟢 Stream is <b>LIVE</b>! "${payload.title}" — ${payload.category?.name||''}`, '🟢');
-      toast('🟢 Stream is LIVE!', true);
-      break;
-    }
-    case 'stream.offline': {
-      pushAlert('stream', `Stream ended. Duration: ${Math.round((payload.durationSeconds||0)/60)} min.`, '🔴');
-      break;
-    }
-    case 'channel.moderate': {
-      pushAlert('sub', `Mod action: <b>${payload.action}</b> on <b>${payload.targetUser?.username}</b> by ${payload.moderator?.username}`, '🛡');
-      break;
-    }
-  }
-}
+// ── LEADERBOARD ──
+const MILESTONES = [
+  {pts:10,name:'Lurker',icon:'👀'},{pts:100,name:'Regular',icon:'💬'},
+  {pts:250,name:'Devoted',icon:'⭐'},{pts:500,name:'Fanatic',icon:'🔥'},
+  {pts:1000,name:'Diamond',icon:'💎'},{pts:2000,name:'Legend',icon:'👑'}
+];
+function getMilestone(s){let m=MILESTONES[0];for(const ms of MILESTONES){if(s>=ms.pts)m=ms;}return m;}
 
-// ── BOT COMMANDS ──
-async function handleBotCommand(message, sender) {
-  const parts = message.trim().split(/\s+/);
-  const cmd = parts[0].toLowerCase();
-  const arg = parts.slice(1).join(' ').replace('@','');
-
-  switch(cmd) {
-    case '!devoted': {
-      const top = getTopUsers(5);
-      if (!top.length) { sendChat('No data yet — keep chatting!'); return; }
-      const lines = top.map((u,i) => `${['🥇','🥈','🥉','4.','5.'][i]} @${u.username} (${u.score} pts)`);
-      sendChat(`🏆 TOP DEVOTED: ${lines.join(' | ')}`);
-      break;
-    }
-    case '!loyalty': {
-      const target = arg || sender.username;
-      const u = findUser(target);
-      if (!u) { sendChat(`@${target} hasn't been tracked yet.`); return; }
-      const ms = getMilestone(u.score);
-      const next = getNextMilestone(u.score);
-      const rank = getRank(u.id);
-      sendChat(`${ms.icon} @${u.username} — Rank #${rank} | ${u.score} pts | ${ms.name}${next ? ` (next: ${next.name} @ ${next.pts} pts)` : ' (MAX)'}`);
-      break;
-    }
-    case '!shoutout': {
-      if (!arg) { sendChat('Usage: !shoutout @username'); return; }
-      const u = findUser(arg);
-      if (!u) { sendChat(`@${arg} hasn't chatted here yet!`); return; }
-      const ms = getMilestone(u.score);
-      sendChat(`📣 Shoutout to @${u.username}! ${ms.icon} ${ms.name} with ${u.score} loyalty pts — ${u.msgs||0} messages, ${u.follows||0} follows, ${u.subs||0} subs! Go show them love! ⚡`);
-      break;
-    }
-    case '!milestone': {
-      const target = arg || sender.username;
-      const u = findUser(target);
-      if (!u) { sendChat(`@${target} not found.`); return; }
-      const next = getNextMilestone(u.score);
-      const ms = getMilestone(u.score);
-      if (!next) { sendChat(`👑 @${u.username} is already a LEGEND — max tier reached!`); return; }
-      const needed = next.pts - u.score;
-      sendChat(`${ms.icon} @${u.username} needs ${needed} more points to reach ${next.icon} ${next.name}!`);
-      break;
-    }
-    case '!leaderboard': {
-      await postLeaderboardToChat();
-      break;
-    }
-    case '!hug': {
-      if (!arg) { sendChat('Usage: !hug @username'); return; }
-      const u = findUser(arg) || { username:arg, score:0 };
-      sendChat(`🤗 Sending a big hug to @${u.username}! They're one of our ${getMilestone(u.score).name} members! ⚡💛`);
-      break;
-    }
-    case '!uptime': {
-      const mins = Math.round((Date.now()-connectedAt)/60000);
-      sendChat(`⚡ Blaze Companion has been running for ${mins} minute${mins!==1?'s':''}. Tracking ${Object.keys(loyalty).length} members!`);
-      break;
-    }
-  }
-}
-
-async function sendChat(message) {
-  if (!channelId) return;
-  try {
-    await fetch(`${BOT_URL}/api/chat`, {
-      method:'POST',
-      headers:{ 'content-type':'application/json' },
-      body: JSON.stringify({ channelId, message })
-    });
-    addBotChatMessage(message);
-  } catch(e) { toast('Could not send message to bot'); }
-}
-
-async function sendBotMessage() {
-  const input = document.getElementById('chat-input');
-  const msg = input.value.trim();
-  if (!msg) return;
-  input.value = '';
-  await sendChat(msg);
-}
-
-async function postLeaderboardToChat() {
-  const top = getTopUsers(3);
-  if (!top.length) { toast('No data yet'); return; }
-  const medals = ['🥇','🥈','🥉'];
-  const lines = top.map((u,i) => `${medals[i]} @${u.username} — ${u.score} pts (${getMilestone(u.score).name})`);
-  sendChat(`⚡ DEVOTION LEADERBOARD ⚡ ${lines.join(' | ')} | powered by Blaze Companion`);
-}
-
-// ── HELPERS ──
-function getTopUsers(n) {
-  return Object.entries(loyalty)
-    .sort((a,b) => b[1].score - a[1].score)
-    .slice(0,n)
-    .map(([id,u]) => ({...u, id}));
-}
-
-function findUser(username) {
-  const un = username.toLowerCase().replace('@','');
-  const entry = Object.entries(loyalty).find(([,u]) => (u.username||'').toLowerCase() === un);
-  return entry ? {...entry[1], id:entry[0]} : null;
-}
-
-function getRank(uid) {
-  const sorted = Object.entries(loyalty).sort((a,b) => b[1].score - a[1].score);
-  return sorted.findIndex(([id]) => id === uid) + 1;
-}
-
-// ── RENDER ──
-function renderLeaderboard() {
-  const top = getTopUsers(20);
-  const maxScore = top[0]?.score || 1;
+function renderLeaderboard(users) {
   const list = document.getElementById('lb-list');
-  if (!top.length) {
-    list.innerHTML = '<div class="empty"><div class="empty-icon">🎯</div><div class="empty-text">Connect to a channel to start tracking loyalty</div></div>';
-    return;
-  }
-  list.innerHTML = top.map((u,i) => {
+  if (!users?.length) { list.innerHTML='<div class="empty"><div class="empty-icon">🎯</div><div>Waiting for chat…</div></div>'; return; }
+  const max = users[0].score || 1;
+  list.innerHTML = users.map((u,i) => {
     const rank = i+1;
-    const ms = getMilestone(u.score);
-    const pct = Math.round((u.score/maxScore)*100);
-    const badges = [];
-    if (u.isSubscriber) badges.push('<span class="badge badge-sub">SUB</span>');
-    if (u.isFollower) badges.push('<span class="badge badge-follower">FOLLOWER</span>');
-    if (u.gifts > 0) badges.push('<span class="badge badge-gift">GIFTER</span>');
-    if (u.votes > 0) badges.push('<span class="badge badge-voter">VOTER</span>');
-    return `
-      <div class="lb-item ${rank<=3?'rank'+rank:''}">
-        <div class="rank-num">${rank<=3?['🥇','🥈','🥉'][rank-1]:rank}</div>
-        <img class="lb-avatar" src="${u.avatarUrl||''}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2238%22 height=%2238%22><rect fill=%22%231E2433%22 width=%2238%22 height=%2238%22 rx=%2219%22/><text x=%2219%22 y=%2225%22 text-anchor=%22middle%22 fill=%22%235A6380%22 font-size=%2218%22>${(u.displayName||u.username||'?')[0].toUpperCase()}</text></svg>'">
-        <div class="lb-info">
-          <div class="lb-name">${u.displayName||u.username} <span style="font-size:12px">${ms.icon}</span></div>
-          <div class="lb-badges">${badges.join('')}</div>
-          <div class="score-bar-wrap"><div class="score-bar" style="width:${pct}%"></div></div>
-        </div>
-        <div class="lb-score">
-          <div class="score-val">${u.score}</div>
-          <div class="score-label">pts</div>
-        </div>
-      </div>`;
+    const ms   = getMilestone(u.score);
+    const pct  = Math.round((u.score/max)*100);
+    const rCls = rank<=3 ? 'r'+rank : '';
+    const medals = ['🥇','🥈','🥉'];
+    const badges = [
+      u.is_subscriber ? '<span class="bdg bdg-sub">SUB</span>' : '',
+      u.is_follower   ? '<span class="bdg bdg-fol">FAN</span>' : '',
+      u.gifts > 0     ? '<span class="bdg bdg-gift">GIFTER</span>' : '',
+    ].join('');
+    return `<div class="lb-item ${rCls}">
+      <div class="rank-n">${rank<=3?medals[rank-1]:rank}</div>
+      <img class="lb-av" src="${u.avatar_url||''}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2236%22 height=%2236%22><rect fill=%22%231E2433%22 width=%2236%22 height=%2236%22 rx=%2218%22/><text x=%2218%22 y=%2224%22 text-anchor=%22middle%22 fill=%22%235A6380%22 font-size=%2216%22>${(u.display_name||u.username||'?')[0].toUpperCase()}</text></svg>'">
+      <div class="lb-info">
+        <div class="lb-name">${esc(u.display_name||u.username)} <span style="font-size:11px">${ms.icon}</span></div>
+        <div class="lb-badges">${badges}</div>
+        <div class="bar-wrap"><div class="bar" style="width:${pct}%"></div></div>
+      </div>
+      <div class="lb-score"><div class="score-v">${u.score}</div><div class="score-l">pts</div></div>
+    </div>`;
   }).join('');
 }
 
-function addChatMessage(sender, message) {
-  const feed = document.getElementById('chat-feed');
-  const empties = feed.querySelectorAll('.empty');
-  empties.forEach(e => e.remove());
-  const role = sender.roles?.includes('moderator') ? 'moderator' : sender.isOwner ? 'owner' : sender.isSubscriber ? 'subscriber' : sender.roles?.includes('vip') ? 'vip' : sender.roles?.includes('og') ? 'og' : '';
-  const div = document.createElement('div');
-  div.className = 'chat-msg';
-  div.innerHTML = `<span class="chat-sender ${role}">${sender.displayName||sender.username}</span><span class="chat-text">${escHtml(message)}</span>`;
-  feed.appendChild(div);
-  feed.scrollTop = feed.scrollHeight;
+// ── CHAT ──
+async function sendBotMsg() {
+  const input = document.getElementById('chat-input');
+  const msg   = input.value.trim();
+  if (!msg || !channelId) return;
+  input.value = '';
+  try {
+    await fetch(`${BOT_URL}/api/chat`, {
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ channelId, message: msg })
+    });
+    const feed = document.getElementById('chat-feed');
+    feed.querySelectorAll('.empty').forEach(e=>e.remove());
+    const div = document.createElement('div');
+    div.className = 'bot-msg';
+    div.innerHTML = `<span style="color:var(--blaze);font-weight:700;">⚡ Bot</span> <span style="color:var(--muted2)">${esc(msg)}</span>`;
+    feed.appendChild(div);
+    feed.scrollTop = feed.scrollHeight;
+  } catch { toast('Send failed'); }
 }
 
-function addBotChatMessage(message) {
-  const feed = document.getElementById('chat-feed');
-  const div = document.createElement('div');
-  div.className = 'chat-bot-msg';
-  div.innerHTML = `<span class="chat-bot-sender">⚡ Bot</span> <span style="color:var(--muted2)">${escHtml(message)}</span>`;
-  feed.appendChild(div);
-  feed.scrollTop = feed.scrollHeight;
+async function postLeaderboard() {
+  const res  = await fetch(`${BOT_URL}/api/chat`, {
+    method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({ channelId, message: '!leaderboard' })
+  });
+  toast('Leaderboard posted to chat!');
 }
 
-function pushAlert(type, html, icon) {
-  const feed = document.getElementById('alert-feed');
-  const empties = feed.querySelectorAll('.empty');
-  empties.forEach(e => e.remove());
-  const div = document.createElement('div');
-  div.className = `alert-item ${type}`;
-  div.innerHTML = `<div class="alert-icon">${icon}</div><div class="alert-body"><div class="alert-msg">${html}</div><div class="alert-time">${new Date().toLocaleTimeString()}</div></div>`;
-  feed.insertBefore(div, feed.firstChild);
-  // Trim to 100
-  while (feed.children.length > 100) feed.removeChild(feed.lastChild);
+// ── SHOP ──
+async function addShopItem() {
+  const slug  = document.getElementById('shop-slug').value.trim();
+  const name  = document.getElementById('shop-name').value.trim();
+  const cost  = parseInt(document.getElementById('shop-cost').value);
+  const stock = parseInt(document.getElementById('shop-stock').value);
+  if (!slug||!name||isNaN(cost)) { toast('Fill in all shop fields'); return; }
+  await fetch(`${BOT_URL}/api/chat`, {
+    method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({ channelId, message: `!additem ${slug} ${name} ${cost}` })
+  });
+  toast(`✅ Item "${name}" added!`);
 }
 
-function toast(msg, big=false) {
-  const container = document.getElementById('toast');
-  const div = document.createElement('div');
-  div.className = 'toast-item' + (big ? ' milestone' : '');
-  div.textContent = msg;
-  container.appendChild(div);
-  setTimeout(() => div.remove(), big ? 5000 : 3000);
+// ── SETTINGS ──
+async function saveCurrency() {
+  const val = document.getElementById('set-currency').value.trim();
+  if (!val) return;
+  await botCmd(`!setcurrency ${val}`);
+  toast(`Currency set to "${val}"`);
 }
-
-function setConnStatus(s) {
-  const el = document.getElementById('conn-status');
-  el.className = 'conn-status ' + s;
-  el.textContent = s === 'connected' ? 'Live' : s === 'connecting' ? 'Connecting…' : 'Disconnected';
+async function savePhrase() {
+  const val = document.getElementById('set-phrase').value.trim();
+  if (!val) return;
+  await botCmd(`!setphrase ${val}`);
+  toast(`Tracking phrase: "${val}"`);
 }
-
-function switchTab(name, el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  ['leaderboard','alerts','milestones'].forEach(t => {
-    document.getElementById('tab-'+t).style.display = t===name ? 'block' : 'none';
+async function addCmd() {
+  const trigger  = document.getElementById('cmd-trigger').value.trim();
+  const response = document.getElementById('cmd-response').value.trim();
+  if (!trigger||!response) { toast('Fill trigger and response'); return; }
+  await botCmd(`!addcmd ${trigger} ${response}`);
+  toast(`Command ${trigger} added!`);
+}
+async function addTimer() {
+  const mins = document.getElementById('timer-mins').value.trim();
+  const msg  = document.getElementById('timer-msg').value.trim();
+  if (!mins||!msg) { toast('Fill interval and message'); return; }
+  await botCmd(`!addtimer ${mins} ${msg}`);
+  toast(`Timer added every ${mins} min`);
+}
+function toggleSetting(type, el) {
+  el.classList.toggle('on');
+  const on = el.classList.contains('on');
+  botCmd(`!${type} ${on?'on':'off'}`);
+  toast(`${type} ${on?'enabled':'disabled'}`);
+}
+async function botCmd(message) {
+  await fetch(`${BOT_URL}/api/chat`, {
+    method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({ channelId, message })
   });
 }
 
-function clearAlerts() { document.getElementById('alert-feed').innerHTML = '<div class="empty"><div class="empty-icon">📡</div><div class="empty-text">Cleared.</div></div>'; }
-function clearChat() { document.getElementById('chat-feed').innerHTML = '<div class="empty"><div class="empty-icon">💬</div><div class="empty-text">Cleared.</div></div>'; }
-function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// ── LEAVE BOT ──
+async function leaveBot() {
+  if (!confirm('Remove BlazeCompanion from your channel? Your loyalty data is kept.')) return;
+  await fetch(`${BOT_URL}/api/disconnect`, {
+    method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({ channelId })
+  });
+  if (pollTimer) clearInterval(pollTimer);
+  showHero();
+  toast('Bot removed. Type !join anytime to re-add.');
+}
+
+function logout() {
+  sessionStorage.clear();
+  accessToken = ''; channelId = '';
+  document.getElementById('user-area').innerHTML = '';
+  document.getElementById('logout-btn').style.display = 'none';
+  if (pollTimer) clearInterval(pollTimer);
+  showHero();
+}
+
+// ── TABS ──
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['lb','alerts','shop','settings'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===name?'block':'none';
+  });
+}
+
+// ── UTILS ──
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(msg){
+  const c=document.getElementById('toast');
+  const d=document.createElement('div');
+  d.className='toast-item'; d.textContent=msg;
+  c.appendChild(d); setTimeout(()=>d.remove(),3500);
+}
 
 // ── RESTORE SESSION ──
 function restoreSession() {
-  const t = sessionStorage.getItem('bc_token');
+  const t  = sessionStorage.getItem('bc_token');
   const ch = sessionStorage.getItem('bc_channel');
-  if (t) {
-    accessToken = t;
-    if (ch) { channelId = ch; document.getElementById('channel-id-input').value = ch; }
-    loadUserProfile();
-    document.getElementById('setup-overlay').style.display = 'none';
+  if (t && ch) {
+    accessToken = t; channelId = ch;
+    // Show user pill from profile
+    fetch('https://api.blaze.stream/v1/users/profile', {
+      headers:{'client-id':CLIENT_ID,'authorization':`Bearer ${t}`,'content-type':'application/json'}
+    }).then(r=>r.json()).then(data=>{
+      const u = data.data||data;
+      if (u?.username) {
+        document.getElementById('user-area').innerHTML = `<div class="user-pill">${u.avatarUrl?`<img src="${u.avatarUrl}" onerror="this.style.display='none'">`:''}
+          <span class="uname">@${u.username}</span></div>`;
+        document.getElementById('logout-btn').style.display = '';
+      }
+    }).catch(()=>{});
+    showDashboard();
+    startPolling();
   }
 }
 
