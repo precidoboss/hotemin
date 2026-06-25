@@ -182,24 +182,50 @@ async function sendChat(channelId, token, message) {
 }
 
 // ── BOT FOLLOW USER ──
+// ── BOT FOLLOW USER via internal bapi ──
 async function botFollowChannel(targetChannelId) {
-  // Try known Blaze follow endpoints
-  const endpoints = [
-    { method: 'POST', url: `${API}/channels/follow`,   body: { channelId: targetChannelId } },
-    { method: 'POST', url: `${API}/channels/follows`,  body: { channelId: targetChannelId } },
-    { method: 'POST', url: `${API}/users/follow`,      body: { channelId: targetChannelId } },
-    { method: 'PUT',  url: `${API}/channels/${targetChannelId}/follow`, body: {} },
+  // Blaze's public API has no follow endpoint, but their internal bapi does.
+  // These are the same base URLs used by the Blaze website itself.
+  const attempts = [
+    {
+      url:    'https://blaze.stream/bapi/channels/follow',
+      method: 'POST',
+      body:   { channelId: targetChannelId }
+    },
+    {
+      url:    'https://blaze.stream/bapi/channel/follow',
+      method: 'POST',
+      body:   { channelId: targetChannelId }
+    },
+    {
+      url:    'https://blaze.stream/bapi/users/follow',
+      method: 'POST',
+      body:   { channelId: targetChannelId }
+    },
+    {
+      url:    `https://blaze.stream/bapi/channels/${targetChannelId}/follow`,
+      method: 'POST',
+      body:   {}
+    },
   ];
-  for (const ep of endpoints) {
+
+  for (const ep of attempts) {
     try {
       const res  = await fetch(ep.url, {
         method:  ep.method,
-        headers: blazeHeaders(BOT_TOKEN),
-        body:    JSON.stringify(ep.body)
+        headers: {
+          'content-type':  'application/json',
+          'accept':        'application/json',
+          'authorization': `Bearer ${BOT_TOKEN}`,
+          'client-id':     CLIENT_ID,
+        },
+        body: JSON.stringify(ep.body)
       });
-      const data = await res.json();
-      console.log(`[BOT] Follow attempt ${ep.url}: ${res.status}`, JSON.stringify(data).slice(0, 80));
-      if (res.ok || data.success || data.data) {
+      const text = await res.text();
+      console.log(`[BOT] Follow ${ep.url} → ${res.status}: ${text.slice(0, 100)}`);
+      let data = {};
+      try { data = JSON.parse(text); } catch {}
+      if (res.ok || data.success) {
         console.log(`[BOT] ✅ Followed ${targetChannelId.slice(0,8)} via ${ep.url}`);
         return true;
       }
@@ -207,7 +233,7 @@ async function botFollowChannel(targetChannelId) {
       console.error(`[BOT] Follow error ${ep.url}:`, e.message);
     }
   }
-  console.log(`[BOT] ⚠ Could not follow ${targetChannelId.slice(0,8)} — no working endpoint found yet`);
+  console.log(`[BOT] ⚠ All follow attempts failed for ${targetChannelId.slice(0,8)}`);
   return false;
 }
 
@@ -217,28 +243,7 @@ async function handleJoin(sender) {
   console.log(`[BOT] !join from @${username} (${streamerId})`);
 
   if (!BOT_TOKEN) {
-    console.error('[BOT] BLAZE_BOT_TOKEN not set in env vars!');
-    return;
-  }
-
-  // Check they follow the bot via API (reliable check)
-  let isFollower = false;
-  try {
-    const res  = await fetch(`${API}/channels/followers?limit=1`, {
-      headers: blazeHeaders(BOT_TOKEN)
-    });
-    const data = await res.json();
-    // Check if streamerId appears in recent followers OR skip gate for now
-    // Blaze API may require specific scope — if check fails, allow join anyway
-    isFollower = true; // allow all for now, gate can be re-enabled once scope confirmed
-  } catch (e) {
-    console.error('[BOT] Follower check error:', e.message);
-    isFollower = true; // fail open so !join still works
-  }
-
-  if (!isFollower) {
-    await sendChat(BOT_CHANNEL_ID, BOT_TOKEN,
-      `@${username} follow ⚡ @${BOT_USERNAME} first, then type !join again!`);
+    console.error('[BOT] BLAZE_BOT_TOKEN not set!');
     return;
   }
 
@@ -246,11 +251,11 @@ async function handleJoin(sender) {
   const { data: existing } = await supabase.from('channels').select('id').eq('id', streamerId).single();
   if (existing) {
     await sendChat(BOT_CHANNEL_ID, BOT_TOKEN,
-      `@${username} ⚡ @${BOT_USERNAME} is already in your chat! Type !leave in your channel to remove.`);
+      `@${username} ⚡ @${BOT_USERNAME} is already in your channel! Type !leave in your chat to remove me.`);
     return;
   }
 
-  // Save channel to Supabase
+  // Save to Supabase
   const { error: upsertErr } = await supabase.from('channels').upsert({
     id: streamerId, token: BOT_TOKEN,
     username, display_name: displayName, avatar_url: avatarUrl,
@@ -264,7 +269,7 @@ async function handleJoin(sender) {
     spam_protection: true, events_on: true
   }, { onConflict: 'channel_id' });
 
-  // Bot follows the streamer back
+  // Bot follows the streamer so it can post in follower-only chat
   await botFollowChannel(streamerId);
 
   // Connect socket to their channel
@@ -272,9 +277,9 @@ async function handleJoin(sender) {
 
   // Reply in bot's channel immediately
   await sendChat(BOT_CHANNEL_ID, BOT_TOKEN,
-    `✅ @${username} ⚡ @${BOT_USERNAME} has joined your channel! Go type /mod ${BOT_USERNAME} in your chat for full features!`);
+    `✅ @${username} ⚡ @${BOT_USERNAME} joined your channel! Two things: 1) Type /mod ${BOT_USERNAME} in your chat 2) If your chat is follower-only, follow @${BOT_USERNAME} back on Blaze so I can post messages!`);
 
-  // Welcome message in streamer's channel — poll until socket is connected then send
+  // Welcome in streamer's channel — wait for socket to confirm connected
   let attempts = 0;
   const welcomeInterval = setInterval(async () => {
     attempts++;
@@ -283,14 +288,14 @@ async function handleJoin(sender) {
       clearInterval(welcomeInterval);
       if (sock?.connected) {
         await sendChat(streamerId, BOT_TOKEN,
-          `⚡ @${BOT_USERNAME} is now active in this channel! Loyalty tracking is ON 🏆 Type !commands to see all features. Mod me with /mod ${BOT_USERNAME} for full power!`);
+          `⚡ @${BOT_USERNAME} is now active! Loyalty tracking ON 🏆 Type !commands to see all features. Mod me with /mod ${BOT_USERNAME} for full features!`);
       } else {
-        console.error(`[BOT] Socket for ${streamerId.slice(0,8)} never connected — welcome msg skipped`);
+        console.error(`[BOT] Socket for @${username} never connected in time`);
       }
     }
-  }, 1000); // check every 1s, up to 10s
+  }, 1000);
 
-  console.log(`[BOT] ✅ Joined channel @${username} (${streamerId})`);
+  console.log(`[BOT] ✅ Joined @${username}`);
 }
 
 // ── LEAVE: streamer types !leave in their own chat or bot's channel ──
