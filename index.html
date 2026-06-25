@@ -196,7 +196,7 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
       <div class="step">
         <div class="step-num">Step 1</div>
         <h3>Follow Us on Blaze</h3>
-        <p>Visit <strong style="color:var(--blaze)">blaze.stream/BlazeCompanion</strong> and follow the channel — required to use !join.</p>
+        <p>Visit <strong style="color:var(--blaze)">blaze.stream/BlazGuy</strong> and follow the channel — required to use !join.</p>
       </div>
       <div class="step">
         <div class="step-num">Step 2</div>
@@ -206,7 +206,7 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
       <div class="step">
         <div class="step-num">Step 3</div>
         <h3>Mod the bot</h3>
-        <p>Type <strong style="color:var(--blaze)">/mod BlazeCompanion</strong> in your chat to unlock full moderation features.</p>
+        <p>Type <strong style="color:var(--blaze)">/mod BlazGuy</strong> in your chat to unlock full moderation features.</p>
       </div>
     </div>
     <button class="hero-cta" onclick="startOAuth()">⚡ Login with Blaze to manage your dashboard</button>
@@ -649,7 +649,7 @@ async function botCmd(message) {
 
 // ── LEAVE BOT ──
 async function leaveBot() {
-  if (!confirm('Remove BlazeCompanion from your channel? Your loyalty data is kept.')) return;
+  if (!confirm('Remove BlazGuy from your channel? Your loyalty data is kept.')) return;
   await fetch(`${BOT_URL}/api/disconnect`, {
     method:'POST', headers:{'content-type':'application/json'},
     body: JSON.stringify({ channelId })
