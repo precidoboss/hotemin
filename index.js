@@ -184,19 +184,22 @@ async function sendChat(channelId, token, message) {
 // ── BOT FOLLOW USER ──
 // ── BOT FOLLOW USER ──
 async function botFollowChannel(targetChannelId) {
+  // bapi endpoints use Blaze's session token (from cookie), not the OAuth JWT
+  const sessionToken = process.env.BLAZE_SESSION_TOKEN || BOT_TOKEN;
   try {
     const res = await fetch(`https://blaze.stream/bapi/channels/${targetChannelId}/follow`, {
       method: 'POST',
       headers: {
-        'authorization': `Bearer ${BOT_TOKEN}`,
-        'client-id':     CLIENT_ID,
+        'authorization': `Bearer ${sessionToken}`,
         'content-type':  'application/json',
         'content-length': '0',
+        'origin':  'https://blaze.stream',
+        'referer': 'https://blaze.stream/',
       },
       body: ''
     });
     const text = await res.text();
-    console.log(`[BOT] Follow ${targetChannelId.slice(0,8)} → ${res.status}: ${text.slice(0,80)}`);
+    console.log(`[BOT] Follow ${targetChannelId.slice(0,8)} → ${res.status}: ${text.slice(0,120)}`);
     return res.ok;
   } catch (e) {
     console.error(`[BOT] Follow error:`, e.message);
