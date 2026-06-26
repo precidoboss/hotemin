@@ -204,7 +204,7 @@ async function botFollowChannel(targetChannelId) {
   }
 }
 
-// ── JOIN: streamer types !join in bot's channel ──
+// ── JOIN: streamer types !join in BlazGuy's channel ──
 async function handleJoin(sender) {
   const { id: streamerId, username, displayName, avatarUrl } = sender;
   console.log(`[BOT] !join from @${username} (${streamerId})`);
@@ -214,8 +214,12 @@ async function handleJoin(sender) {
     return;
   }
 
+  // Don't let the bot join itself
+  if (streamerId === BOT_CHANNEL_ID) return;
+
   // Check not already joined
-  const { data: existing } = await supabase.from('channels').select('id').eq('id', streamerId).single();
+  const { data: existing } = await supabase
+    .from('channels').select('id').eq('id', streamerId).single();
   if (existing) {
     await sendChat(BOT_CHANNEL_ID, BOT_TOKEN,
       `@${username} ⚡ @${BOT_USERNAME} is already in your channel! Type !leave in your chat to remove me.`);
@@ -236,59 +240,81 @@ async function handleJoin(sender) {
     spam_protection: true, events_on: true
   }, { onConflict: 'channel_id' });
 
-  // Bot follows the streamer so it can post in follower-only chat
-  await botFollowChannel(streamerId);
+  // Follow the streamer so bot can post in follower-only chat
+  const followed = await botFollowChannel(streamerId);
+  console.log(`[BOT] Follow result for @${username}: ${followed}`);
 
   // Connect socket to their channel
   connectChannel(streamerId, BOT_TOKEN);
 
-  // Reply in bot's channel immediately
+  // Confirm in BlazGuy's channel
   await sendChat(BOT_CHANNEL_ID, BOT_TOKEN,
-    `✅ @${username} ⚡ @${BOT_USERNAME} joined your channel! Two things: 1) Type /mod ${BOT_USERNAME} in your chat 2) If your chat is follower-only, follow @${BOT_USERNAME} back on Blaze so I can post messages!`);
+    `✅ @${username} ⚡ @${BOT_USERNAME} has joined your channel and followed you! Now type /mod ${BOT_USERNAME} in your chat to unlock full features!`);
 
-  // Welcome in streamer's channel — wait for socket to confirm connected
+  // Welcome in streamer's channel — wait for socket confirmed connected
   let attempts = 0;
   const welcomeInterval = setInterval(async () => {
     attempts++;
     const sock = sockets[streamerId];
-    if (sock?.connected || attempts >= 10) {
+    if (sock?.connected || attempts >= 15) {
       clearInterval(welcomeInterval);
       if (sock?.connected) {
         await sendChat(streamerId, BOT_TOKEN,
-          `⚡ @${BOT_USERNAME} is now active! Loyalty tracking ON 🏆 Type !commands to see all features. Mod me with /mod ${BOT_USERNAME} for full features!`);
+          `⚡ @${BOT_USERNAME} has joined the chat! Loyalty tracking is ON 🏆 I'm now tracking your most devoted viewers. Type !commands to see everything I can do!`);
       } else {
-        console.error(`[BOT] Socket for @${username} never connected in time`);
+        console.error(`[BOT] Socket for @${username} never connected after 15s`);
       }
     }
   }, 1000);
 
-  console.log(`[BOT] ✅ Joined @${username}`);
+  console.log(`[BOT] ✅ Joined @${username} (${streamerId})`);
 }
 
-// ── LEAVE: streamer types !leave in their own chat or bot's channel ──
-async function handleLeave(channelId, username) {
+// ── LEAVE: works from streamer's OWN chat OR from BlazGuy's chat ──
+async function handleLeave(channelId, sender) {
+  const username = sender.username || sender;
+
+  // Figure out the actual streamer channel to leave
+  // If typed in BlazGuy's channel → leave the sender's channel
+  // If typed in their own channel → leave that channel
+  const targetChannelId = (channelId === BOT_CHANNEL_ID) ? sender.id : channelId;
+  const targetUsername  = username;
+
+  // Don't let bot leave its own channel
+  if (targetChannelId === BOT_CHANNEL_ID) return;
+
+  // Send goodbye in streamer's channel FIRST (before disconnecting)
+  try {
+    await sendChat(targetChannelId, BOT_TOKEN,
+      `👋 @${BOT_USERNAME} is leaving this channel. Your loyalty data is saved forever — type !join in @${BOT_USERNAME}'s chat anytime to bring me back! ⚡`);
+  } catch {}
+
+  // Small delay so goodbye message sends before socket closes
+  await new Promise(r => setTimeout(r, 1500));
+
   // Disconnect socket
-  const sock = sockets[channelId];
+  const sock = sockets[targetChannelId];
   if (sock) {
     clearTimeout(sock.reconnectTimer);
     if (sock.socket) sock.socket.disconnect();
-    delete sockets[channelId];
+    delete sockets[targetChannelId];
   }
 
-  // Clear timers
-  if (timedMsgTimers[channelId]) {
-    timedMsgTimers[channelId].forEach(t => clearInterval(t));
-    delete timedMsgTimers[channelId];
+  // Clear timed message timers
+  if (timedMsgTimers[targetChannelId]) {
+    timedMsgTimers[targetChannelId].forEach(t => clearInterval(t));
+    delete timedMsgTimers[targetChannelId];
   }
 
-  // Remove from Supabase
-  await supabase.from('channels').delete().eq('id', channelId);
+  // Remove from Supabase (bot stops rejoining on restart)
+  // NOTE: we do NOT unfollow — BlazGuy stays following the streamer
+  await supabase.from('channels').delete().eq('id', targetChannelId);
 
-  // Notify in bot channel
+  // Confirm in BlazGuy's channel
   await sendChat(BOT_CHANNEL_ID, BOT_TOKEN,
-    `👋 @${username} ${BOT_USERNAME} has left your channel. Come back anytime — your loyalty data is saved! Type !join to re-add.`);
+    `👋 @${BOT_USERNAME} has left @${targetUsername}'s channel. Data saved. Type !join here to re-add anytime!`);
 
-  console.log(`[BOT] Left channel @${username} (${channelId.slice(0,8)})`);
+  console.log(`[BOT] Left channel @${targetUsername} (${targetChannelId})`);
 }
 
 // ── SUBSCRIPTIONS ──
@@ -814,7 +840,7 @@ async function handleEvent(channelId, token, type, payload) {
       console.log(`[${channelId.slice(0,8)}] MSG from @${sender.username}: ${message.slice(0,60)}`);
 
       if (msgCmd === '!join') { await handleJoin(sender); return; }
-      if (msgCmd === '!leave') { await handleLeave(channelId, sender.username); return; }
+      if (msgCmd === '!leave') { await handleLeave(channelId, sender); return; }
 
       const settings = await getSettings(channelId);
 
