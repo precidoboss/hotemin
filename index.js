@@ -3,10 +3,32 @@ const cors       = require('cors');
 const { io }     = require('socket.io-client');
 const fetch      = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
+const Groq       = require('groq-sdk');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ── GROQ AI ──
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+async function askGroq(systemPrompt, userPrompt, maxTokens = 120) {
+  try {
+    const res = await groq.chat.completions.create({
+      model:    'llama3-8b-8192',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt   }
+      ],
+      max_tokens:  maxTokens,
+      temperature: 0.7,
+    });
+    return res.choices[0]?.message?.content?.trim() || null;
+  } catch (e) {
+    console.error('[GROQ]', e.message);
+    return null;
+  }
+}
 
 // ── CONFIG ──
 const CLIENT_ID     = process.env.BLAZE_CLIENT_ID     || 'UR4ghwgTTJ2rAE1_KBZgmCKmkvQtO4ux';
@@ -803,7 +825,31 @@ async function handleCommand(channelId, token, message, sender) {
     case '!timers': {
       const { data: timers } = await supabase.from('timed_messages').select('id,message,interval_mins,active').eq('channel_id', channelId);
       if (!timers?.length) { await say('No timers set. Use !addtimer mins message'); return; }
-      await say(`⏱ Timers: ${timers.map(t => `[${t.id}] every ${t.interval_mins}min: "${t.message.slice(0,25)}"`).join(' | ')}`);
+      await say(`⏱ Timers: ${timers.map(t => `[${t.id}] ${t.active?'✅':'⏸'} every ${t.interval_mins}min: "${t.message.slice(0,25)}"`).join(' | ')} — use !stoptimer [id] or !deltimer [id]`);
+      break;
+    }
+    case '!stoptimer': {
+      const id = parseInt(parts[1]);
+      if (!id) { await say('Usage: !stoptimer [id] — get IDs with !timers'); return; }
+      await supabase.from('timed_messages').update({ active: false }).eq('channel_id', channelId).eq('id', id);
+      await startTimedMessages(channelId, token); // restart without this one
+      await say(`⏸ Timer [${id}] paused. Use !starttimer ${id} to resume.`);
+      break;
+    }
+    case '!starttimer': {
+      const id = parseInt(parts[1]);
+      if (!id) { await say('Usage: !starttimer [id]'); return; }
+      await supabase.from('timed_messages').update({ active: true }).eq('channel_id', channelId).eq('id', id);
+      await startTimedMessages(channelId, token);
+      await say(`▶ Timer [${id}] resumed.`);
+      break;
+    }
+    case '!deltimer': {
+      const id = parseInt(parts[1]);
+      if (!id) { await say('Usage: !deltimer [id] — get IDs with !timers'); return; }
+      await supabase.from('timed_messages').delete().eq('channel_id', channelId).eq('id', id);
+      await startTimedMessages(channelId, token);
+      await say(`🗑 Timer [${id}] deleted permanently.`);
       break;
     }
 
@@ -818,6 +864,121 @@ async function handleCommand(channelId, token, message, sender) {
       const on = parts[1]?.toLowerCase() === 'on';
       await updateSettings(channelId, { events_on: on });
       await say(`📣 Event announcements ${on ? 'ENABLED' : 'DISABLED'}.`);
+      break;
+    }
+
+    // ── AI COMMANDS (powered by Groq / Llama 3) ──
+
+    case '!ask': {
+      if (!arg) { await say(`Usage: !ask your question here`); return; }
+      if (!process.env.GROQ_API_KEY) { await say(`AI not configured yet!`); return; }
+      const settings = await getSettings(channelId);
+      const answer = await askGroq(
+        `You are BlazGuy, a fun and helpful Blaze.stream chat bot. Keep answers SHORT (max 2 sentences), casual, and chat-friendly. Never use markdown. Channel currency is called "${settings.currency_name}".`,
+        arg,
+        100
+      );
+      if (answer) {
+        await say(`🤖 ${answer}`);
+      } else {
+        await say(`🤖 @${sender.username} I couldn't think of an answer right now, try again!`);
+      }
+      break;
+    }
+
+    case '!roast': {
+      if (!arg) { await say(`Usage: !roast @username`); return; }
+      const target = arg.replace('@','');
+      const { data: u } = await supabase.from('loyalty').select('score,msgs,username').eq('channel_id', channelId).eq('username', target).single();
+      const context = u ? `They have ${u.score} loyalty points and sent ${u.msgs} messages.` : `They haven't chatted much.`;
+      const roast = await askGroq(
+        `You are a funny, savage but friendly Blaze.stream chat bot called BlazGuy. Write a single short roast (1 sentence, max 20 words) about a viewer. Keep it fun, not mean. No markdown.`,
+        `Roast the viewer named "${target}". ${context}`,
+        60
+      );
+      await say(roast ? `🔥 @${target} — ${roast}` : `🔥 @${target} is so mysterious even AI can't roast them!`);
+      break;
+    }
+
+    case '!compliment': {
+      const target = (arg || sender.username).replace('@','');
+      const { data: u } = await supabase.from('loyalty').select('score,milestone').eq('channel_id', channelId).eq('username', target).single();
+      const context = u ? `They have ${u.score} loyalty points and are a "${u.milestone}" member.` : '';
+      const comp = await askGroq(
+        `You are BlazGuy, a warm and hype Blaze.stream chat bot. Write a single genuine compliment (1 sentence, max 20 words) for a viewer. Energetic and fun. No markdown.`,
+        `Compliment the viewer named "${target}". ${context}`,
+        60
+      );
+      await say(comp ? `💛 @${target} — ${comp}` : `💛 @${target} is an absolute legend in this chat!`);
+      break;
+    }
+
+    case '!aimod': {
+      // Mod-only: checks if a message is toxic
+      if (!arg) { await say(`Usage: !aimod [message to check]`); return; }
+      const verdict = await askGroq(
+        `You are a chat moderation AI for a live stream. Analyse the message and reply with ONLY one of: SAFE, WARN, or BAN — then a single short reason (max 8 words). No markdown.`,
+        `Message: "${arg}"`,
+        40
+      );
+      await say(`🛡 AI Mod verdict: ${verdict || 'Unable to analyse'}`);
+      break;
+    }
+
+    case '!recap': {
+      // AI summary of current stream session
+      const { data: topUsers } = await supabase.from('loyalty').select('username,score').eq('channel_id', channelId).order('score', { ascending: false }).limit(3);
+      const { data: recentAlerts } = await supabase.from('alerts').select('type,message').eq('channel_id', channelId).order('created_at', { ascending: false }).limit(10);
+      const topStr    = topUsers?.map((u,i) => `${i+1}. @${u.username} (${u.score} pts)`).join(', ') || 'no data';
+      const alertsStr = recentAlerts?.map(a => a.message).join('; ') || 'no recent events';
+      const recap = await askGroq(
+        `You are BlazGuy, an energetic Blaze.stream chat bot. Write a fun 2-sentence stream recap for chat. Mention top viewers and recent events. Hype and positive. No markdown.`,
+        `Top viewers: ${topStr}. Recent events: ${alertsStr}`,
+        120
+      );
+      await say(recap ? `📋 Stream Recap: ${recap}` : `📋 Great stream! Check !devoted for your top fans!`);
+      break;
+    }
+
+    case '!predict': {
+      if (!arg) { await say(`Usage: !predict will we hit 100 followers today?`); return; }
+      const { data: stats } = await supabase.from('loyalty').select('score.sum()', { count: 'exact' }).eq('channel_id', channelId);
+      const prediction = await askGroq(
+        `You are BlazGuy, a fun Blaze.stream chat bot. Give a short, fun, dramatic prediction (1-2 sentences, max 25 words). Be playful and entertaining. No markdown.`,
+        `Prediction question: "${arg}"`,
+        80
+      );
+      await say(prediction ? `🔮 ${prediction}` : `🔮 The crystal ball says... absolutely YES! Let's go! ⚡`);
+      break;
+    }
+
+    case '!story': {
+      // Generate a short story featuring chat members
+      const { data: top } = await supabase.from('loyalty').select('username').eq('channel_id', channelId).order('score', { ascending: false }).limit(3);
+      const names = top?.map(u => u.username).join(', ') || sender.username;
+      const story = await askGroq(
+        `You are BlazGuy, a creative Blaze.stream chat bot. Write a VERY short funny story (2-3 sentences max) featuring the given viewers as characters. Fun and stream-themed. No markdown.`,
+        `Write a story featuring these viewers: ${names}`,
+        130
+      );
+      await say(story ? `📖 ${story}` : `📖 Once upon a time, the chat was absolutely popping... and they all earned max loyalty points! ⚡`);
+      break;
+    }
+
+    case '!aishoutout': {
+      if (!arg) { await say(`Usage: !aishoutout @username`); return; }
+      const target = arg.replace('@','');
+      const { data: u } = await supabase.from('loyalty').select('*').eq('channel_id', channelId).eq('username', target).single();
+      const ms   = u ? getMilestone(u.score) : MILESTONES[0];
+      const context = u
+        ? `They have ${u.score} loyalty points, sent ${u.msgs} messages, ${u.subs} subs, ${u.gifts} gifts. They are a "${ms.name}" tier member.`
+        : `They are a new member of the community.`;
+      const shoutout = await askGroq(
+        `You are BlazGuy, an energetic Blaze.stream chat bot. Write a personalised hype shoutout for a viewer (2 sentences max, 30 words max). Use their stats to make it feel genuine. Mention their Blaze channel. No markdown.`,
+        `Shoutout for @${target}. ${context}`,
+        100
+      );
+      await say(shoutout ? `📣 ${shoutout} Check them out at blaze.stream/${target} ⚡` : `📣 Massive shoutout to @${target}! An amazing member of this community — go check them out! ⚡`);
       break;
     }
 
@@ -1080,13 +1241,23 @@ app.get('/api/state', async (req, res) => {
   });
 });
 
-// Send chat from dashboard
+// Send bot COMMANDS from dashboard — only ! commands allowed, no free chat
+// This prevents the dashboard from being used as a chat client
 app.post('/api/chat', async (req, res) => {
   const { channelId, message } = req.body;
   if (!channelId || !message) return res.status(400).json({ error: 'channelId and message required' });
+
+  // Only allow ! commands — no free-form chat posting
+  if (!message.trim().startsWith('!')) {
+    return res.status(403).json({ error: 'Only bot commands (starting with !) can be sent from the dashboard.' });
+  }
+
   const token = sockets[channelId]?.token || await getChannelToken(channelId);
   if (!token) return res.status(404).json({ error: 'Channel not connected' });
-  await sendChat(channelId, token, message);
+
+  // Run through bot command handler as if the owner typed it
+  const fakeOwnerSender = { id: channelId, username: 'dashboard', displayName: 'Dashboard', avatarUrl: '', isSubscriber: false, isFollower: false };
+  await handleCommand(channelId, token, message.trim(), fakeOwnerSender);
   res.json({ ok: true });
 });
 
