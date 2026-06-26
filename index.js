@@ -10,19 +10,11 @@ app.use(cors());
 app.use(express.json());
 
 // ── GROQ AI ──
-let groq = null;
-function getGroq() {
-  if (!groq && process.env.GROQ_API_KEY) {
-    groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-  }
-  return groq;
-}
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 async function askGroq(systemPrompt, userPrompt, maxTokens = 120) {
-  const client = getGroq();
-  if (!client) { console.log('[GROQ] No API key set'); return null; }
   try {
-    const res = await client.chat.completions.create({
+    const res = await groq.chat.completions.create({
       model:    'llama3-8b-8192',
       messages: [
         { role: 'system', content: systemPrompt },
