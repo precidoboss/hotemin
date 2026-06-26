@@ -11,6 +11,7 @@
     "socket.io-client": "^4.7.5",
     "node-fetch": "^2.7.0",
     "cors": "^2.8.5",
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.39.0",
+    "groq-sdk": "^0.3.3"
   }
 }
