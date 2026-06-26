@@ -169,10 +169,215 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 .toast-item{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:12px 16px;font-size:13px;min-width:260px;animation:toastin .3s ease;box-shadow:0 8px 30px rgba(0,0,0,.4);}
 @keyframes toastin{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 
-@media(max-width:900px){
-  .dash{grid-template-columns:1fr;grid-template-rows:auto;}
-  .dash-sidebar,.dash-right{display:none;}
-  .hero-steps{grid-template-columns:1fr;}
+/* ── MOBILE ── */
+@media(max-width:768px){
+  /* Hero */
+  .hero{margin:32px auto;padding:0 16px;}
+  .hero h1{font-size:28px;}
+  .hero p{font-size:14px;}
+  .hero-steps{grid-template-columns:1fr;gap:10px;}
+  .hero-cta{width:100%;justify-content:center;padding:14px 20px;font-size:15px;}
+  .hero-token{flex-direction:column;}
+  .hero-token input,.hero-token .btn{width:100%;}
+
+  /* Topbar */
+  .topbar{padding:0 14px;height:52px;}
+  .logo{font-size:15px;}
+  .logo-dot{width:7px;height:7px;}
+  .conn-pill{font-size:10px;padding:3px 8px;}
+  .user-pill .uname{display:none;}
+  #logout-btn{font-size:11px;padding:4px 8px;}
+
+  /* Dashboard layout — single column, sidebar/right hidden */
+  .dash{
+    display:flex;
+    flex-direction:column;
+    height:calc(100vh - 52px);
+  }
+  .dash-sidebar{display:none;}
+  .dash-right{display:none;}
+  .dash-main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+
+  /* Mobile stats bar — horizontal scroll at top of dashboard */
+  .mob-stats{
+    display:flex;
+    gap:8px;
+    padding:10px 14px;
+    overflow-x:auto;
+    border-bottom:1px solid var(--border);
+    background:var(--surface);
+    flex-shrink:0;
+  }
+  .mob-stats::-webkit-scrollbar{display:none;}
+  .mob-stat{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:8px 14px;
+    text-align:center;
+    flex-shrink:0;
+    min-width:64px;
+  }
+  .mob-stat .msv{font-size:18px;font-weight:700;line-height:1;}
+  .mob-stat .msl{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:3px;}
+  .mob-stat.blaze .msv{color:var(--blaze);}
+  .mob-stat.green .msv{color:var(--green);}
+
+  /* Tabs — scrollable horizontal */
+  .main-tabs{
+    overflow-x:auto;
+    flex-shrink:0;
+  }
+  .main-tabs::-webkit-scrollbar{display:none;}
+  .tab{padding:10px 14px;font-size:12px;white-space:nowrap;}
+
+  /* Main body */
+  .main-body{padding:12px 14px;flex:1;overflow-y:auto;}
+
+  /* Leaderboard */
+  .lb-header{flex-direction:column;gap:8px;align-items:stretch;}
+  .lb-header .btn{width:100%;}
+  .lb-title{font-size:16px;}
+  .lb-item{padding:10px 12px;gap:10px;}
+  .lb-av{width:32px;height:32px;}
+  .lb-name{font-size:12px;}
+  .score-v{font-size:15px;}
+
+  /* Form rows — stack vertically */
+  .form-row{flex-direction:column;gap:10px;}
+  .form-row .btn{width:100%;}
+  .field{width:100%!important;max-width:100%!important;}
+
+  /* Bottom nav bar */
+  .mob-nav{
+    display:flex;
+    background:var(--surface);
+    border-top:1px solid var(--border);
+    flex-shrink:0;
+    padding:0;
+    z-index:40;
+  }
+  .mob-nav-btn{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:8px 4px;
+    gap:3px;
+    cursor:pointer;
+    border:none;
+    background:none;
+    color:var(--muted);
+    font-size:9px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    font-family:inherit;
+    -webkit-tap-highlight-color:transparent;
+    transition:color .15s;
+  }
+  .mob-nav-btn .ni{font-size:18px;line-height:1;}
+  .mob-nav-btn.active{color:var(--blaze);}
+  .mob-nav-btn:active{background:var(--blazedim);}
+
+  /* Mobile chat drawer */
+  .mob-chat-drawer{
+    position:fixed;
+    bottom:0;left:0;right:0;
+    height:70vh;
+    background:var(--surface);
+    border-top:1px solid var(--border);
+    border-radius:20px 20px 0 0;
+    z-index:100;
+    display:flex;
+    flex-direction:column;
+    transform:translateY(100%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+  }
+  .mob-chat-drawer.open{transform:translateY(0);}
+  .mob-chat-handle{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 16px;
+    border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .mob-chat-handle .handle-bar{
+    width:36px;height:4px;background:var(--border2);border-radius:2px;
+    position:absolute;left:50%;transform:translateX(-50%);top:8px;
+  }
+  .mob-chat-handle span{font-size:13px;font-weight:700;color:var(--text);}
+  .mob-chat-body{flex:1;overflow-y:auto;padding:10px 14px;}
+  .mob-chat-input{
+    padding:10px 14px;
+    border-top:1px solid var(--border);
+    display:flex;
+    gap:8px;
+    flex-shrink:0;
+    padding-bottom:env(safe-area-inset-bottom, 10px);
+  }
+  .mob-chat-input input{
+    flex:1;
+    background:var(--card);
+    border:1px solid var(--border2);
+    color:var(--text);
+    padding:10px 12px;
+    border-radius:10px;
+    font-size:14px;
+    font-family:inherit;
+  }
+  .mob-chat-input input:focus{outline:1px solid var(--blaze);}
+  .mob-overlay{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,.6);
+    z-index:99;
+    display:none;
+  }
+  .mob-overlay.show{display:block;}
+
+  /* Mobile commands sheet */
+  .mob-cmds-drawer{
+    position:fixed;
+    bottom:0;left:0;right:0;
+    max-height:80vh;
+    background:var(--surface);
+    border-top:1px solid var(--border);
+    border-radius:20px 20px 0 0;
+    z-index:100;
+    display:flex;
+    flex-direction:column;
+    transform:translateY(100%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    overflow:hidden;
+  }
+  .mob-cmds-drawer.open{transform:translateY(0);}
+  .mob-cmds-body{overflow-y:auto;padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .mob-cmd-chip{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:12px;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .mob-cmd-chip code{color:var(--blaze);font-family:'JetBrains Mono',monospace;font-size:11px;display:block;margin-bottom:2px;}
+  .mob-cmd-chip span{color:var(--muted2);font-size:10px;}
+
+  /* Toast bottom offset on mobile */
+  #toast{bottom:80px;right:12px;left:12px;}
+  .toast-item{min-width:unset;width:100%;}
+
+  /* Leave btn */
+  .leave-btn{font-size:14px;padding:12px;}
+
+  /* Shop table — card view on mobile */
+  .shop-table thead{display:none;}
+  .shop-table tr{display:block;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;padding:10px 12px;}
+  .shop-table td{display:flex;justify-content:space-between;padding:4px 0;border:none;font-size:12px;}
+  .shop-table td::before{content:attr(data-label);color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;}
 }
 </style>
 </head>
@@ -222,6 +427,15 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 <!-- DASHBOARD (shown when joined) -->
 <div id="dash-view" style="display:none;">
   <div class="dash">
+    <!-- MOBILE STATS BAR (only shown on mobile via CSS) -->
+    <div class="mob-stats" id="mob-stats-bar" style="display:none;">
+      <div class="mob-stat blaze"><div class="msv" id="ms-chatters">0</div><div class="msl">Chatters</div></div>
+      <div class="mob-stat"><div class="msv" id="ms-msgs">0</div><div class="msl">Messages</div></div>
+      <div class="mob-stat green"><div class="msv" id="ms-follows">0</div><div class="msl">Follows</div></div>
+      <div class="mob-stat"><div class="msv" id="ms-subs">0</div><div class="msl">Subs</div></div>
+      <div class="mob-stat"><div class="msv" id="ms-gifts">0</div><div class="msl">Gifts</div></div>
+      <div class="mob-stat blaze"><div class="msv" id="ms-votes">0</div><div class="msl">Votes</div></div>
+    </div>
     <!-- SIDEBAR -->
     <div class="dash-sidebar">
       <div class="sb-section">
@@ -357,9 +571,76 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
       </div>
     </div>
   </div>
-</div>
+  </div><!-- end .dash -->
 
-<div id="toast"></div>
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="mob-nav" id="mob-nav" style="display:none;">
+    <button class="mob-nav-btn active" onclick="switchTab('lb',this);mobNavActive(this)" id="mobnav-lb">
+      <span class="ni">🏆</span>Board
+    </button>
+    <button class="mob-nav-btn" onclick="switchTab('alerts',this);mobNavActive(this)" id="mobnav-alerts">
+      <span class="ni">🔔</span>Alerts
+    </button>
+    <button class="mob-nav-btn" onclick="openMobChat()" id="mobnav-chat">
+      <span class="ni">💬</span>Chat
+    </button>
+    <button class="mob-nav-btn" onclick="openMobCmds()" id="mobnav-cmds">
+      <span class="ni">⚡</span>Commands
+    </button>
+    <button class="mob-nav-btn" onclick="switchTab('settings',this);mobNavActive(this)" id="mobnav-settings">
+      <span class="ni">⚙</span>Settings
+    </button>
+  </nav>
+
+  <!-- MOBILE OVERLAY -->
+  <div class="mob-overlay" id="mob-overlay" onclick="closeMobDrawers()"></div>
+
+  <!-- MOBILE CHAT DRAWER -->
+  <div class="mob-chat-drawer" id="mob-chat-drawer">
+    <div class="mob-chat-handle">
+      <div class="handle-bar"></div>
+      <span>💬 Live Chat</span>
+      <button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="closeMobDrawers()">Close</button>
+    </div>
+    <div class="mob-chat-body" id="mob-chat-body">
+      <div class="empty"><div class="empty-icon">💬</div><div>Chat appears here</div></div>
+    </div>
+    <div class="mob-chat-input">
+      <input id="mob-chat-input" placeholder="Send as BlazGuy…" onkeydown="if(event.key==='Enter')sendMobBotMsg()">
+      <button class="btn" onclick="sendMobBotMsg()">Send</button>
+    </div>
+  </div>
+
+  <!-- MOBILE COMMANDS DRAWER -->
+  <div class="mob-cmds-drawer" id="mob-cmds-drawer">
+    <div class="mob-chat-handle" style="position:relative;padding-top:20px;">
+      <div class="handle-bar"></div>
+      <span>⚡ Bot Commands</span>
+      <button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="closeMobDrawers()">Close</button>
+    </div>
+    <div class="mob-cmds-body">
+      <div class="mob-cmd-chip" onclick="quickCmd('!devoted')"><code>!devoted</code><span>Top 5 loyal chatters</span></div>
+      <div class="mob-cmd-chip" onclick="quickCmd('!leaderboard')"><code>!leaderboard</code><span>Post top 3 in chat</span></div>
+      <div class="mob-cmd-chip" onclick="quickCmd('!commands')"><code>!commands</code><span>List all commands</span></div>
+      <div class="mob-cmd-chip" onclick="quickCmd('!games')"><code>!games</code><span>Show mini games</span></div>
+      <div class="mob-cmd-chip" onclick="quickCmd('!shop')"><code>!shop</code><span>Loyalty shop</span></div>
+      <div class="mob-cmd-chip" onclick="quickCmd('!uptime')"><code>!uptime</code><span>Bot uptime</span></div>
+      <div class="mob-cmd-chip" onclick="promptCmd('!shoutout')"><code>!shoutout</code><span>Shoutout a user</span></div>
+      <div class="mob-cmd-chip" onclick="promptCmd('!so')"><code>!so</code><span>Shoutout + clip</span></div>
+      <div class="mob-cmd-chip" onclick="promptCmd('!loyalty')"><code>!loyalty</code><span>Check loyalty rank</span></div>
+      <div class="mob-cmd-chip" onclick="promptCmd('!balance')"><code>!balance</code><span>Point balance</span></div>
+      <div class="mob-cmd-chip" onclick="quickCmd('!brb 5')"><code>!brb</code><span>BRB 5 min</span></div>
+      <div class="mob-cmd-chip" onclick="quickCmd('!back')"><code>!back</code><span>Back from BRB</span></div>
+      <div class="mob-cmd-chip" onclick="promptCmd('!poll')"><code>!poll</code><span>Start a poll</span></div>
+      <div class="mob-cmd-chip" onclick="promptCmd('!addcmd')"><code>!addcmd</code><span>Add custom command</span></div>
+      <div class="mob-cmd-chip" onclick="promptCmd('!additem')"><code>!additem</code><span>Add shop item</span></div>
+      <div class="mob-cmd-chip" style="grid-column:1/-1;background:var(--reddim);border-color:rgba(240,80,80,.2);" onclick="leaveBot()">
+        <code style="color:var(--red);">!leave</code><span style="color:var(--red);">Remove bot from channel</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end #dash-view -->
 
 <script>
 // ── CONFIG ──
@@ -472,6 +753,7 @@ async function connectToBot() {
 function showDashboard() {
   document.getElementById('hero-view').style.display = 'none';
   document.getElementById('dash-view').style.display = 'block';
+  initMobileUI();
 }
 
 function showHero() {
@@ -506,6 +788,7 @@ async function pollState() {
       document.getElementById('s-subs').textContent     = data.stats.subs;
       document.getElementById('s-gifts').textContent    = data.stats.gifts;
       document.getElementById('s-votes').textContent    = data.stats.votes;
+      syncMobileStats(data.stats);
     }
 
     // Leaderboard
@@ -670,14 +953,107 @@ function logout() {
 
 // ── TABS ──
 function switchTab(name, el) {
+  // Desktop tabs
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
+  if (el?.classList?.contains('tab')) el.classList.add('active');
   ['lb','alerts','shop','settings'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===name?'block':'none';
   });
+  // Close drawers on mobile
+  closeMobDrawers();
 }
 
-// ── UTILS ──
+// ── MOBILE ──
+const isMobile = () => window.innerWidth <= 768;
+
+function initMobileUI() {
+  if (!isMobile()) return;
+  document.getElementById('mob-stats-bar').style.display = 'flex';
+  document.getElementById('mob-nav').style.display = 'flex';
+  // Move main-tabs inside dash-main and hide on mobile (nav replaces it)
+  document.querySelector('.main-tabs').style.display = 'none';
+}
+
+function mobNavActive(el) {
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function openMobChat() {
+  document.getElementById('mob-chat-drawer').classList.add('open');
+  document.getElementById('mob-overlay').classList.add('show');
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mobnav-chat').classList.add('active');
+}
+
+function openMobCmds() {
+  document.getElementById('mob-cmds-drawer').classList.add('open');
+  document.getElementById('mob-overlay').classList.add('show');
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mobnav-cmds').classList.add('active');
+}
+
+function closeMobDrawers() {
+  document.getElementById('mob-chat-drawer').classList.remove('open');
+  document.getElementById('mob-cmds-drawer').classList.remove('open');
+  document.getElementById('mob-overlay').classList.remove('show');
+}
+
+async function sendMobBotMsg() {
+  const input = document.getElementById('mob-chat-input');
+  const msg   = input.value.trim();
+  if (!msg || !channelId) return;
+  input.value = '';
+  await fetch(`${BOT_URL}/api/chat`, {
+    method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({ channelId, message: msg })
+  });
+  const feed = document.getElementById('mob-chat-body');
+  feed.querySelectorAll('.empty').forEach(e => e.remove());
+  const div = document.createElement('div');
+  div.className = 'bot-msg';
+  div.innerHTML = `<span style="color:var(--blaze);font-weight:700;">⚡ Bot</span> <span style="color:var(--muted2)">${esc(msg)}</span>`;
+  feed.appendChild(div);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function quickCmd(cmd) {
+  closeMobDrawers();
+  setTimeout(async () => {
+    await fetch(`${BOT_URL}/api/chat`, {
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ channelId, message: cmd })
+    });
+    toast(`Sent: ${cmd}`);
+  }, 300);
+}
+
+function promptCmd(cmd) {
+  closeMobDrawers();
+  const arg = prompt(`${cmd} — enter argument (e.g. @username):`);
+  if (arg === null) return;
+  quickCmd(arg ? `${cmd} ${arg}` : cmd);
+}
+
+// Sync mobile stats
+function syncMobileStats(stats) {
+  if (!stats) return;
+  document.getElementById('ms-chatters').textContent = stats.chatters;
+  document.getElementById('ms-msgs').textContent     = stats.msgs;
+  document.getElementById('ms-follows').textContent  = stats.follows;
+  document.getElementById('ms-subs').textContent     = stats.subs;
+  document.getElementById('ms-gifts').textContent    = stats.gifts;
+  document.getElementById('ms-votes').textContent    = stats.votes;
+}
+
+// Also mirror chat messages into mobile chat body
+function addMobChatMsg(html) {
+  const feed = document.getElementById('mob-chat-body');
+  if (!feed) return;
+  feed.querySelectorAll('.empty').forEach(e => e.remove());
+  feed.innerHTML += html;
+  feed.scrollTop = feed.scrollHeight;
+}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function toast(msg){
   const c=document.getElementById('toast');
