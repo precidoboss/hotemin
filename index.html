@@ -563,11 +563,11 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 
     <!-- RIGHT: LIVE CHAT -->
     <div class="dash-right">
-      <div class="rp-header">Live Chat <button class="btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="document.getElementById('chat-feed').innerHTML=''">Clear</button></div>
-      <div class="chat-feed" id="chat-feed"><div class="empty"><div class="empty-icon">💬</div><div>Chat appears here</div></div></div>
+      <div class="rp-header">Live Alerts <button class="btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="document.getElementById('chat-feed').innerHTML=''">Clear</button></div>
+      <div class="chat-feed" id="chat-feed"><div class="empty"><div class="empty-icon">🔔</div><div>Events appear here</div></div></div>
       <div class="chat-input-row">
-        <input id="chat-input" placeholder="Send as bot…" onkeydown="if(event.key==='Enter')sendBotMsg()">
-        <button class="btn btn-sm" onclick="sendBotMsg()">Send</button>
+        <input id="chat-input" placeholder="Run a bot command e.g. !devoted" onkeydown="if(event.key==='Enter')sendBotMsg()" style="font-family:'JetBrains Mono',monospace;font-size:12px;">
+        <button class="btn btn-sm" onclick="sendBotMsg()">Run</button>
       </div>
     </div>
   </div>
@@ -599,15 +599,15 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
   <div class="mob-chat-drawer" id="mob-chat-drawer">
     <div class="mob-chat-handle">
       <div class="handle-bar"></div>
-      <span>💬 Live Chat</span>
+      <span>⚡ Run Command</span>
       <button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="closeMobDrawers()">Close</button>
     </div>
     <div class="mob-chat-body" id="mob-chat-body">
-      <div class="empty"><div class="empty-icon">💬</div><div>Chat appears here</div></div>
+      <div class="empty"><div class="empty-icon">⚡</div><div>Type a command like !devoted</div></div>
     </div>
     <div class="mob-chat-input">
-      <input id="mob-chat-input" placeholder="Send as BlazGuy…" onkeydown="if(event.key==='Enter')sendMobBotMsg()">
-      <button class="btn" onclick="sendMobBotMsg()">Send</button>
+      <input id="mob-chat-input" placeholder="!devoted, !leaderboard…" onkeydown="if(event.key==='Enter')sendMobBotMsg()" style="font-family:'JetBrains Mono',monospace;">
+      <button class="btn" onclick="sendMobBotMsg()">Run</button>
     </div>
   </div>
 
@@ -852,19 +852,23 @@ async function sendBotMsg() {
   const input = document.getElementById('chat-input');
   const msg   = input.value.trim();
   if (!msg || !channelId) return;
+  if (!msg.startsWith('!')) { toast('⚠ Only bot commands allowed here — start with !'); return; }
   input.value = '';
   try {
-    await fetch(`${BOT_URL}/api/chat`, {
+    const res  = await fetch(`${BOT_URL}/api/chat`, {
       method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify({ channelId, message: msg })
     });
+    const data = await res.json();
+    if (!res.ok) { toast('❌ ' + (data.error || 'Command failed')); return; }
     const feed = document.getElementById('chat-feed');
     feed.querySelectorAll('.empty').forEach(e=>e.remove());
     const div = document.createElement('div');
     div.className = 'bot-msg';
-    div.innerHTML = `<span style="color:var(--blaze);font-weight:700;">⚡ Bot</span> <span style="color:var(--muted2)">${esc(msg)}</span>`;
+    div.innerHTML = `<span style="color:var(--blaze);font-weight:700;">⚡ Command</span> <span style="color:var(--muted2)">${esc(msg)}</span>`;
     feed.appendChild(div);
     feed.scrollTop = feed.scrollHeight;
+    toast(`✅ ${msg} sent`);
   } catch { toast('Send failed'); }
 }
 
@@ -1003,18 +1007,22 @@ async function sendMobBotMsg() {
   const input = document.getElementById('mob-chat-input');
   const msg   = input.value.trim();
   if (!msg || !channelId) return;
+  if (!msg.startsWith('!')) { toast('⚠ Only bot commands — start with !'); return; }
   input.value = '';
-  await fetch(`${BOT_URL}/api/chat`, {
-    method:'POST', headers:{'content-type':'application/json'},
-    body: JSON.stringify({ channelId, message: msg })
-  });
-  const feed = document.getElementById('mob-chat-body');
-  feed.querySelectorAll('.empty').forEach(e => e.remove());
-  const div = document.createElement('div');
-  div.className = 'bot-msg';
-  div.innerHTML = `<span style="color:var(--blaze);font-weight:700;">⚡ Bot</span> <span style="color:var(--muted2)">${esc(msg)}</span>`;
-  feed.appendChild(div);
-  feed.scrollTop = feed.scrollHeight;
+  try {
+    await fetch(`${BOT_URL}/api/chat`, {
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ channelId, message: msg })
+    });
+    const feed = document.getElementById('mob-chat-body');
+    feed.querySelectorAll('.empty').forEach(e => e.remove());
+    const div = document.createElement('div');
+    div.className = 'bot-msg';
+    div.innerHTML = `<span style="color:var(--blaze);font-weight:700;">⚡ ${esc(msg)}</span>`;
+    feed.appendChild(div);
+    feed.scrollTop = feed.scrollHeight;
+    toast(`✅ ${msg} sent`);
+  } catch { toast('Send failed'); }
 }
 
 function quickCmd(cmd) {
