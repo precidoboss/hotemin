@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlazGuy OBS Overlay</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:transparent;
+  font-family:'Segoe UI',system-ui,sans-serif;
+  overflow:hidden;
+  width:100vw;height:100vh;
+  pointer-events:none;
+}
+
+/* ── ALERT CARDS ── */
+#alert-container{
+  position:fixed;
+  top:24px;right:24px;
+  width:380px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  z-index:100;
+}
+
+.alert-card{
+  background:linear-gradient(135deg,rgba(14,17,24,0.97),rgba(19,23,32,0.97));
+  border-radius:16px;
+  padding:16px 18px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  border:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 8px 40px rgba(0,0,0,0.6);
+  animation:slideIn .5s cubic-bezier(.34,1.56,.64,1) forwards;
+  position:relative;
+  overflow:hidden;
+}
+.alert-card::before{
+  content:'';
+  position:absolute;
+  left:0;top:0;bottom:0;
+  width:4px;
+  border-radius:4px 0 0 4px;
+}
+.alert-card.follow::before{background:#4C8EF5;}
+.alert-card.sub::before{background:#9B6CF5;}
+.alert-card.gift::before{background:#22D47A;}
+.alert-card.raid::before{background:#F05050;}
+.alert-card.milestone::before{background:#F0B90B;}
+.alert-card.vote::before{background:#F0B90B;}
+.alert-card.stream::before{background:#22D47A;}
+
+/* Glow per type */
+.alert-card.follow{box-shadow:0 8px 40px rgba(76,142,245,0.2);}
+.alert-card.sub{box-shadow:0 8px 40px rgba(155,108,245,0.25);}
+.alert-card.gift{box-shadow:0 8px 40px rgba(34,212,122,0.2);}
+.alert-card.raid{box-shadow:0 8px 40px rgba(240,80,80,0.3);}
+.alert-card.milestone{box-shadow:0 8px 40px rgba(240,185,11,0.3);}
+
+@keyframes slideIn{
+  from{opacity:0;transform:translateX(60px) scale(0.9);}
+  to{opacity:1;transform:translateX(0) scale(1);}
+}
+@keyframes slideOut{
+  from{opacity:1;transform:translateX(0) scale(1);}
+  to{opacity:0;transform:translateX(60px) scale(0.9);}
+}
+.alert-card.out{animation:slideOut .4s ease forwards;}
+
+.alert-icon{font-size:32px;flex-shrink:0;line-height:1;}
+.alert-icon.spin{animation:spinOnce 0.6s ease;}
+@keyframes spinOnce{from{transform:rotate(-20deg) scale(0.5);}to{transform:rotate(0) scale(1);}}
+
+.alert-body{flex:1;min-width:0;}
+.alert-type{
+  font-size:10px;font-weight:800;text-transform:uppercase;
+  letter-spacing:1.5px;margin-bottom:3px;opacity:0.7;
+}
+.follow .alert-type{color:#4C8EF5;}
+.sub .alert-type{color:#9B6CF5;}
+.gift .alert-type{color:#22D47A;}
+.raid .alert-type{color:#F05050;}
+.milestone .alert-type{color:#F0B90B;}
+.vote .alert-type{color:#F0B90B;}
+.stream .alert-type{color:#22D47A;}
+
+.alert-title{
+  font-size:17px;font-weight:700;color:#E8EAF0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  line-height:1.2;
+}
+.alert-sub{
+  font-size:12px;color:rgba(232,234,240,0.55);margin-top:3px;
+}
+
+.alert-pts{
+  font-size:13px;font-weight:700;color:#F0B90B;
+  background:rgba(240,185,11,0.1);
+  border:1px solid rgba(240,185,11,0.2);
+  border-radius:8px;padding:4px 8px;
+  white-space:nowrap;flex-shrink:0;
+  font-family:'JetBrains Mono',monospace;
+}
+
+/* Progress bar on card */
+.alert-progress{
+  position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:rgba(255,255,255,0.05);
+}
+.alert-progress-bar{
+  height:100%;
+  transition:width linear;
+}
+.follow .alert-progress-bar{background:#4C8EF5;}
+.sub .alert-progress-bar{background:#9B6CF5;}
+.gift .alert-progress-bar{background:#22D47A;}
+.raid .alert-progress-bar{background:#F05050;}
+.milestone .alert-progress-bar{background:#F0B90B;}
+
+/* ── MILESTONE CELEBRATION (full width) ── */
+.milestone-banner{
+  position:fixed;
+  bottom:80px;left:50%;transform:translateX(-50%);
+  background:linear-gradient(135deg,rgba(240,185,11,0.15),rgba(14,17,24,0.97));
+  border:1px solid rgba(240,185,11,0.4);
+  border-radius:20px;padding:20px 32px;
+  text-align:center;
+  box-shadow:0 0 60px rgba(240,185,11,0.2);
+  animation:bannerIn .6s cubic-bezier(.34,1.56,.64,1) forwards;
+  white-space:nowrap;
+}
+@keyframes bannerIn{
+  from{opacity:0;transform:translateX(-50%) scale(0.7);}
+  to{opacity:1;transform:translateX(-50%) scale(1);}
+}
+.milestone-banner.out{animation:bannerOut .4s ease forwards;}
+@keyframes bannerOut{
+  from{opacity:1;transform:translateX(-50%) scale(1);}
+  to{opacity:0;transform:translateX(-50%) scale(0.8);}
+}
+.milestone-banner .mb-icon{font-size:40px;margin-bottom:6px;}
+.milestone-banner .mb-title{font-size:22px;font-weight:800;color:#F0B90B;}
+.milestone-banner .mb-sub{font-size:14px;color:rgba(232,234,240,0.7);margin-top:4px;}
+
+/* ── PARTICLES ── */
+.particle{
+  position:fixed;pointer-events:none;font-size:20px;
+  animation:particleFly 1.5s ease forwards;z-index:200;
+}
+@keyframes particleFly{
+  0%{opacity:1;transform:translateY(0) scale(1);}
+  100%{opacity:0;transform:translateY(-120px) scale(0.3);}
+}
+
+/* ── CHAT OVERLAY (bottom left) ── */
+#chat-container{
+  position:fixed;
+  bottom:24px;left:24px;
+  width:360px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.chat-msg-card{
+  background:rgba(14,17,24,0.88);
+  border-radius:10px;
+  padding:8px 12px;
+  font-size:13px;
+  border:1px solid rgba(255,255,255,0.06);
+  animation:chatIn .3s ease;
+  line-height:1.4;
+}
+@keyframes chatIn{
+  from{opacity:0;transform:translateY(8px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.chat-msg-card.out{animation:chatOut .3s ease forwards;}
+@keyframes chatOut{
+  from{opacity:1;}to{opacity:0;}
+}
+.chat-msg-sender{font-weight:700;margin-right:4px;}
+.chat-msg-sender.owner{color:#F0B90B;}
+.chat-msg-sender.subscriber{color:#9B6CF5;}
+.chat-msg-sender.moderator{color:#F05050;}
+.chat-msg-text{color:rgba(232,234,240,0.8);}
+
+/* ── RAID FULL SCREEN ── */
+.raid-overlay{
+  position:fixed;inset:0;
+  background:rgba(240,80,80,0.08);
+  border:3px solid rgba(240,80,80,0.4);
+  border-radius:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  animation:raidPulse 0.5s ease;
+  pointer-events:none;
+  z-index:150;
+}
+@keyframes raidPulse{
+  0%{opacity:0;}
+  50%{opacity:1;}
+  100%{opacity:0.8;}
+}
+.raid-overlay .rt{font-size:48px;font-weight:900;color:#F05050;text-shadow:0 0 40px rgba(240,80,80,0.8);}
+.raid-overlay .rs{font-size:24px;color:rgba(240,80,80,0.8);margin-top:8px;}
+</style>
+</head>
+<body>
+
+<div id="alert-container"></div>
+<div id="chat-container"></div>
+
+<script>
+// ── CONFIG from URL params ──
+const params    = new URLSearchParams(window.location.search);
+const channelId = params.get('channel') || '';
+const showChat  = params.get('chat') !== 'false';
+const BOT_URL   = 'https://hotemin.onrender.com';
+
+if (!channelId) {
+  document.body.innerHTML = '<div style="color:#F0B90B;font-size:18px;padding:20px;font-family:monospace;">⚠ Add ?channel=YOUR_CHANNEL_UUID to the URL</div>';
+}
+
+// ── STATE ──
+let lastAlertTime = null;
+let lastChatTime  = null;
+const shownAlerts = new Set();
+
+// ── POLL ──
+async function poll() {
+  if (!channelId) return;
+  try {
+    const res  = await fetch(`${BOT_URL}/api/state?channelId=${channelId}`);
+    const data = await res.json();
+
+    // New alerts
+    if (data.alerts?.length) {
+      for (const alert of [...data.alerts].reverse()) {
+        const key = alert.id || (alert.type + alert.created_at);
+        if (shownAlerts.has(key)) continue;
+        shownAlerts.add(key);
+        // Only show alerts from last 30 seconds
+        const age = Date.now() - new Date(alert.created_at || alert.time).getTime();
+        if (age > 30000) continue;
+        showAlert(alert);
+      }
+    }
+  } catch {}
+}
+
+// ── SHOW ALERT ──
+const ALERT_ICONS = {
+  follow:    '💙', sub: '💜', gift: '🎁', raid: '🚨',
+  milestone: '🏆', vote: '⚡', stream: '🟢', chat: null, mod: null
+};
+const ALERT_LABELS = {
+  follow: 'New Follower', sub: 'New Subscriber', gift: 'Gift Subs',
+  raid: '🚨 RAID', milestone: 'Milestone Unlocked!', vote: 'Voted', stream: 'Stream'
+};
+
+function showAlert(alert) {
+  if (!ALERT_ICONS[alert.type] || alert.type === 'chat' || alert.type === 'mod') {
+    // Show chat messages in chat overlay
+    if (alert.type === 'chat' && showChat) showChatMsg(alert.message);
+    return;
+  }
+
+  const container = document.getElementById('alert-container');
+  const card      = document.createElement('div');
+  card.className  = `alert-card ${alert.type}`;
+
+  const duration = alert.type === 'raid' ? 6000 : 4000;
+  const icon     = ALERT_ICONS[alert.type] || '⚡';
+  const label    = ALERT_LABELS[alert.type] || alert.type;
+
+  card.innerHTML = `
+    <div class="alert-icon spin">${icon}</div>
+    <div class="alert-body">
+      <div class="alert-type">${label}</div>
+      <div class="alert-title">${esc(alert.message)}</div>
+    </div>
+    <div class="alert-progress"><div class="alert-progress-bar" style="width:100%"></div></div>
+  `;
+
+  container.insertBefore(card, container.firstChild);
+
+  // Progress bar countdown
+  const bar = card.querySelector('.alert-progress-bar');
+  bar.style.transition = `width ${duration}ms linear`;
+  setTimeout(() => bar.style.width = '0%', 50);
+
+  // Milestone — also show banner
+  if (alert.type === 'milestone') {
+    showMilestoneBanner(alert.message);
+    spawnParticles();
+  }
+
+  // Raid — full screen flash
+  if (alert.type === 'raid') {
+    showRaidOverlay(alert.message);
+  }
+
+  // Dismiss
+  setTimeout(() => {
+    card.classList.add('out');
+    setTimeout(() => card.remove(), 400);
+  }, duration);
+
+  // Max 4 cards visible
+  while (container.children.length > 4) {
+    container.lastChild.remove();
+  }
+}
+
+function showChatMsg(message) {
+  if (!showChat) return;
+  const container = document.getElementById('chat-container');
+  // Parse "username: message" format
+  const colonIdx = message.indexOf(':');
+  let sender = '', text = message;
+  if (colonIdx > 0) { sender = message.slice(0, colonIdx); text = message.slice(colonIdx + 1).trim(); }
+
+  const div = document.createElement('div');
+  div.className = 'chat-msg-card';
+  div.innerHTML = sender
+    ? `<span class="chat-msg-sender">${esc(sender)}</span><span class="chat-msg-text">${esc(text)}</span>`
+    : `<span class="chat-msg-text">${esc(message)}</span>`;
+  container.appendChild(div);
+
+  // Keep max 5 messages
+  while (container.children.length > 5) {
+    const old = container.firstChild;
+    old.classList.add('out');
+    setTimeout(() => old.remove(), 300);
+  }
+
+  // Auto remove after 8s
+  setTimeout(() => {
+    div.classList.add('out');
+    setTimeout(() => div.remove(), 300);
+  }, 8000);
+}
+
+function showMilestoneBanner(message) {
+  const existing = document.querySelector('.milestone-banner');
+  if (existing) existing.remove();
+  const banner = document.createElement('div');
+  banner.className = 'milestone-banner';
+  banner.innerHTML = `<div class="mb-icon">🏆</div><div class="mb-title">Milestone!</div><div class="mb-sub">${esc(message)}</div>`;
+  document.body.appendChild(banner);
+  setTimeout(() => {
+    banner.classList.add('out');
+    setTimeout(() => banner.remove(), 400);
+  }, 5000);
+}
+
+function showRaidOverlay(message) {
+  const overlay = document.createElement('div');
+  overlay.className = 'raid-overlay';
+  const name = message.replace('RAID from ','').replace('!','').trim();
+  overlay.innerHTML = `<div class="rt">🚨 RAID!</div><div class="rs">${esc(name)} is here!</div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.remove(), 4000);
+}
+
+function spawnParticles() {
+  const emojis = ['⚡','🏆','✨','🎉','💛','🔥'];
+  for (let i = 0; i < 8; i++) {
+    setTimeout(() => {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      p.style.left  = Math.random() * 80 + 10 + 'vw';
+      p.style.bottom = Math.random() * 30 + 10 + 'vh';
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 1500);
+    }, i * 80);
+  }
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Poll every 2.5 seconds
+setInterval(poll, 2500);
+poll();
+</script>
+</body>
+</html>
