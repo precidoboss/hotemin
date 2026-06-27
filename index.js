@@ -10,11 +10,19 @@ app.use(cors());
 app.use(express.json());
 
 // ── GROQ AI ──
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+let groq = null;
+function getGroq() {
+  if (!groq && process.env.GROQ_API_KEY) {
+    groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  }
+  return groq;
+}
 
 async function askGroq(systemPrompt, userPrompt, maxTokens = 120) {
+  const client = getGroq();
+  if (!client) { console.log('[GROQ] No API key set'); return null; }
   try {
-    const res = await groq.chat.completions.create({
+    const res = await client.chat.completions.create({
       model:    'llama3-8b-8192',
       messages: [
         { role: 'system', content: systemPrompt },
@@ -37,10 +45,74 @@ const API           = 'https://api.blaze.stream/v1';
 const startedAt     = Date.now();
 
 // ── BOT ACCOUNT (single identity across all channels) ──
-// Set BLAZE_BOT_TOKEN and BLAZE_BOT_CHANNEL_ID in Render env vars
-const BOT_TOKEN      = process.env.BLAZE_BOT_TOKEN      || ''; // MUST be set in Render env vars
-const BOT_CHANNEL_ID = process.env.BLAZE_BOT_CHANNEL_ID || '6b0971e0-548c-447a-bb71-e2fa62369d18';
-let   BOT_USERNAME   = process.env.BLAZE_BOT_USERNAME   || 'BlazGuy';
+const BOT_SESSION_TOKEN  = process.env.BLAZE_SESSION_TOKEN     || '';
+let   BOT_API_TOKEN      = process.env.BLAZE_BOT_TOKEN         || '';
+let   BOT_REFRESH_TOKEN  = process.env.BLAZE_BOT_REFRESH_TOKEN || '';
+let   BOT_TOKEN          = BOT_API_TOKEN;
+const BOT_CHANNEL_ID     = process.env.BLAZE_BOT_CHANNEL_ID    || '6b0971e0-548c-447a-bb71-e2fa62369d18';
+let   BOT_USERNAME       = process.env.BLAZE_BOT_USERNAME       || 'BlazGuy';
+let   tokenRefreshing    = false;
+
+// ── AUTO REFRESH TOKEN ──
+async function refreshBotToken() {
+  if (tokenRefreshing) return false;
+  if (!BOT_REFRESH_TOKEN) { console.error('[BOT] No refresh token set — cannot refresh'); return false; }
+  tokenRefreshing = true;
+  console.log('[BOT] Refreshing access token...');
+  try {
+    const res  = await fetch('https://blaze.stream/bapi/oauth2/refresh', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        clientId:     CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        refreshToken: BOT_REFRESH_TOKEN
+      })
+    });
+    const data = await res.json();
+    if (data.accessToken) {
+      BOT_API_TOKEN = data.accessToken;
+      BOT_TOKEN     = data.accessToken;
+      if (data.refreshToken) BOT_REFRESH_TOKEN = data.refreshToken;
+      // Update all connected channel sockets to use new token
+      Object.values(sockets).forEach(s => { if (s.token === BOT_TOKEN || !s.token) s.token = BOT_API_TOKEN; });
+      console.log(`[BOT] ✅ Token refreshed! New length: ${BOT_API_TOKEN.length}`);
+      tokenRefreshing = false;
+      return true;
+    } else {
+      console.error('[BOT] Token refresh failed:', JSON.stringify(data));
+      tokenRefreshing = false;
+      return false;
+    }
+  } catch (e) {
+    console.error('[BOT] Token refresh error:', e.message);
+    tokenRefreshing = false;
+    return false;
+  }
+}
+
+// Wrapper around fetch that auto-refreshes on 401
+async function blazeFetch(url, options, retry = true) {
+  const res = await fetch(url, options);
+  if (res.status === 401 && retry) {
+    console.log(`[BOT] 401 on ${url} — attempting token refresh`);
+    const refreshed = await refreshBotToken();
+    if (refreshed) {
+      // Retry with new token
+      options.headers['authorization'] = `Bearer ${BOT_API_TOKEN}`;
+      return fetch(url, options);
+    }
+  }
+  return res;
+}
+
+// Auto-refresh every 20 minutes proactively
+setInterval(async () => {
+  if (BOT_REFRESH_TOKEN) {
+    console.log('[BOT] Proactive token refresh...');
+    await refreshBotToken();
+  }
+}, 20 * 60 * 1000);
 
 // Supabase — set these in Render env vars
 const supabase = createClient(
@@ -192,12 +264,18 @@ async function pushAlert(channelId, type, message, icon) {
 // ── BLAZE CHAT ──
 async function sendChat(channelId, token, message) {
   try {
-    const res = await fetch(`${API}/chats/messages`, {
+    const headers = blazeHeaders(BOT_API_TOKEN || token);
+    const res = await blazeFetch(`${API}/chats/messages`, {
       method: 'POST',
-      headers: blazeHeaders(token),
+      headers,
       body: JSON.stringify({ channelId, message })
     });
-    console.log(`[${channelId.slice(0,8)}] SENT: ${message}`);
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error(`[${channelId.slice(0,8)}] sendChat failed ${res.status}: ${txt.slice(0,80)}`);
+    } else {
+      console.log(`[${channelId.slice(0,8)}] SENT: ${message.slice(0,60)}`);
+    }
   } catch (e) {
     console.error(`[${channelId.slice(0,8)}] sendChat error:`, e.message);
   }
@@ -206,14 +284,13 @@ async function sendChat(channelId, token, message) {
 // ── BOT FOLLOW USER ──
 // ── BOT FOLLOW USER ──
 async function botFollowChannel(targetChannelId) {
-  // bapi endpoints use Blaze's session token (from cookie), not the OAuth JWT
-  const sessionToken = process.env.BLAZE_SESSION_TOKEN || BOT_TOKEN;
+  const sessionToken = BOT_SESSION_TOKEN || BOT_API_TOKEN;
   try {
     const res = await fetch(`https://blaze.stream/bapi/channels/${targetChannelId}/follow`, {
       method: 'POST',
       headers: {
-        'authorization': `Bearer ${sessionToken}`,
-        'content-type':  'application/json',
+        'authorization':  `Bearer ${sessionToken}`,
+        'content-type':   'application/json',
         'content-length': '0',
         'origin':  'https://blaze.stream',
         'referer': 'https://blaze.stream/',
@@ -352,9 +429,9 @@ async function createSubscriptions(channelId, token, sessionId) {
   ];
   for (const type of types) {
     try {
-      const res  = await fetch(`${API}/events/subscriptions`, {
-        method: 'POST',
-        headers: blazeHeaders(token),
+      const headers = blazeHeaders(BOT_API_TOKEN || token);
+      const res  = await blazeFetch(`${API}/events/subscriptions`, {
+        method: 'POST', headers,
         body: JSON.stringify({ type, version: '1', sessionId, condition: { channelId } })
       });
       const data = await res.json();
@@ -1279,10 +1356,14 @@ app.get('/api/channels', async (req, res) => {
 // Debug — see all connected sockets and bot status
 app.get('/api/debug', (req, res) => {
   res.json({
-    bot_token_set:    !!BOT_TOKEN,
-    bot_token_length: BOT_TOKEN?.length || 0,
-    bot_channel_id:   BOT_CHANNEL_ID,
-    bot_username:     BOT_USERNAME,
+    bot_api_token_set:        !!BOT_API_TOKEN,
+    bot_api_token_length:     BOT_API_TOKEN?.length || 0,
+    bot_refresh_token_set:    !!BOT_REFRESH_TOKEN,
+    bot_session_token_set:    !!BOT_SESSION_TOKEN,
+    bot_session_token_length: BOT_SESSION_TOKEN?.length || 0,
+    groq_set:                 !!process.env.GROQ_API_KEY,
+    bot_channel_id:           BOT_CHANNEL_ID,
+    bot_username:             BOT_USERNAME,
     sockets: Object.entries(sockets).map(([id, s]) => ({
       channelId: id,
       connected: s.connected,
