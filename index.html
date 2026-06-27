@@ -164,6 +164,13 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;color:var(--muted);text-align:center;gap:8px;}
 .empty-icon{font-size:28px;opacity:.4;}
 
+/* AI TOOL CARDS */
+.ai-tool-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:border-color .15s,background .15s;text-align:center;}
+.ai-tool-card:hover{border-color:var(--blaze);background:var(--blazedim);}
+.ai-icon{font-size:24px;margin-bottom:6px;}
+.ai-name{font-size:13px;font-weight:700;margin-bottom:3px;}
+.ai-desc{font-size:11px;color:var(--muted2);}
+
 /* TOAST */
 #toast{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
 .toast-item{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:12px 16px;font-size:13px;min-width:260px;animation:toastin .3s ease;box-shadow:0 8px 30px rgba(0,0,0,.4);}
@@ -452,21 +459,22 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
       <div class="sb-section" style="flex:1;overflow-y:auto;">
         <div class="sb-label">Bot Commands</div>
         <div class="cmd-list">
-          <div class="cmd-item"><code>!devoted</code><div class="cd">Top 5 loyal chatters</div></div>
+        <div class="cmd-item"><code>!devoted</code><div class="cd">Top 5 loyal chatters</div></div>
           <div class="cmd-item"><code>!loyalty [@user]</code><div class="cd">Rank & devotion score</div></div>
-          <div class="cmd-item"><code>!shoutout @user</code><div class="cd">Auto shoutout with stats</div></div>
+          <div class="cmd-item"><code>!shoutout @user</code><div class="cd">Shoutout with stats</div></div>
           <div class="cmd-item"><code>!balance [@user]</code><div class="cd">Point balance</div></div>
           <div class="cmd-item"><code>!leaderboard</code><div class="cd">Post top 3 in chat</div></div>
-          <div class="cmd-item"><code>!shop</code><div class="cd">View loyalty shop</div></div>
-          <div class="cmd-item"><code>!buy slug</code><div class="cd">Redeem shop item</div></div>
-          <div class="cmd-item"><code>!so @user</code><div class="cd">Shoutout + latest clip</div></div>
+          <div class="cmd-item"><code>!shop</code><div class="cd">Loyalty shop</div></div>
+          <div class="cmd-item"><code>!buy slug</code><div class="cd">Redeem item</div></div>
           <div class="cmd-item"><code>!brb [mins]</code><div class="cd">BRB mode</div></div>
-          <div class="cmd-item"><code>!poll Q? | A | B</code><div class="cd">Run a poll</div></div>
-          <div class="cmd-item"><code>!setphrase word</code><div class="cd">Track a phrase</div></div>
+          <div class="cmd-item"><code>!poll Q? | A | B</code><div class="cd">Live poll</div></div>
+          <div class="cmd-item"><code>!ask question</code><div class="cd">AI answers in chat</div></div>
+          <div class="cmd-item"><code>!roast @user</code><div class="cd">AI roast</div></div>
+          <div class="cmd-item"><code>!predict question</code><div class="cd">AI prediction</div></div>
+          <div class="cmd-item"><code>!games</code><div class="cd">coinflip, roll, rps, trivia, heist</div></div>
           <div class="cmd-item"><code>!addcmd !cmd text</code><div class="cd">Custom command</div></div>
           <div class="cmd-item"><code>!addtimer 30 msg</code><div class="cd">Timed message</div></div>
-          <div class="cmd-item"><code>!games</code><div class="cd">coinflip, roll, rps, trivia, heist</div></div>
-          <div class="cmd-item"><code>!leave</code><div class="cd">Remove bot from channel</div></div>
+          <div class="cmd-item"><code>!leave</code><div class="cd">Remove bot</div></div>
         </div>
       </div>
       <div class="sb-section">
@@ -477,8 +485,9 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
     <!-- MAIN -->
     <div class="dash-main">
       <div class="main-tabs">
-        <div class="tab active" onclick="switchTab('lb',this)">🏆 Loyalty Board</div>
-        <div class="tab" onclick="switchTab('alerts',this)">🔔 Live Alerts</div>
+        <div class="tab active" onclick="switchTab('lb',this)">🏆 Board</div>
+        <div class="tab" onclick="switchTab('alerts',this)">🔔 Alerts</div>
+        <div class="tab" onclick="switchTab('ai',this)">🤖 AI Tools</div>
         <div class="tab" onclick="switchTab('shop',this)">🛒 Shop</div>
         <div class="tab" onclick="switchTab('settings',this)">⚙ Settings</div>
       </div>
@@ -487,8 +496,11 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
         <!-- LEADERBOARD -->
         <div id="tab-lb">
           <div class="lb-header">
-            <div><div class="lb-title">Devotion Leaderboard</div><div class="lb-sub">Scored live by chats, follows, subs, gifts & votes</div></div>
-            <button class="btn btn-sm" onclick="postLeaderboard()">Post to Chat</button>
+            <div><div class="lb-title">Devotion Leaderboard</div><div class="lb-sub">Scored live · chats, follows, subs, gifts & votes</div></div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-ghost btn-sm" onclick="botCmd('!devoted')">Post Top 5</button>
+              <button class="btn btn-sm" onclick="botCmd('!leaderboard')">Post Top 3 ⚡</button>
+            </div>
           </div>
           <div class="lb-list" id="lb-list"><div class="empty"><div class="empty-icon">🎯</div><div>Waiting for chat activity…</div></div></div>
         </div>
@@ -502,19 +514,73 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
           <div id="alert-feed"></div>
         </div>
 
+        <!-- AI TOOLS -->
+        <div id="tab-ai" style="display:none;">
+          <div class="lb-header"><div><div class="lb-title">AI Tools</div><div class="lb-sub">Powered by Groq · Llama 3 · Free</div></div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+            <div class="ai-tool-card" onclick="aiTool('ask')">
+              <div class="ai-icon">🤖</div>
+              <div class="ai-name">Ask AI</div>
+              <div class="ai-desc">Answer any question in chat</div>
+            </div>
+            <div class="ai-tool-card" onclick="aiTool('roast')">
+              <div class="ai-icon">🔥</div>
+              <div class="ai-name">Roast</div>
+              <div class="ai-desc">Friendly roast a viewer</div>
+            </div>
+            <div class="ai-tool-card" onclick="aiTool('compliment')">
+              <div class="ai-icon">💛</div>
+              <div class="ai-name">Compliment</div>
+              <div class="ai-desc">Hype up a viewer</div>
+            </div>
+            <div class="ai-tool-card" onclick="aiTool('predict')">
+              <div class="ai-icon">🔮</div>
+              <div class="ai-name">Predict</div>
+              <div class="ai-desc">Fun stream prediction</div>
+            </div>
+            <div class="ai-tool-card" onclick="aiTool('story')">
+              <div class="ai-icon">📖</div>
+              <div class="ai-name">Story</div>
+              <div class="ai-desc">Short story with top viewers</div>
+            </div>
+            <div class="ai-tool-card" onclick="aiTool('recap')">
+              <div class="ai-icon">📋</div>
+              <div class="ai-name">Recap</div>
+              <div class="ai-desc">AI stream session summary</div>
+            </div>
+            <div class="ai-tool-card" onclick="aiTool('aishoutout')">
+              <div class="ai-icon">📣</div>
+              <div class="ai-name">AI Shoutout</div>
+              <div class="ai-desc">Personalised shoutout</div>
+            </div>
+            <div class="ai-tool-card" onclick="aiTool('aimod')">
+              <div class="ai-icon">🛡</div>
+              <div class="ai-name">AI Mod Check</div>
+              <div class="ai-desc">Check if a message is toxic</div>
+            </div>
+          </div>
+          <div id="ai-input-area" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;">
+            <div class="field"><label id="ai-input-label">Input</label><input id="ai-input" placeholder=""></div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <button class="btn" onclick="runAiTool()">Run in Chat ⚡</button>
+              <button class="btn-ghost" onclick="document.getElementById('ai-input-area').style.display='none'">Cancel</button>
+            </div>
+          </div>
+        </div>
+
         <!-- SHOP -->
         <div id="tab-shop" style="display:none;">
           <div class="lb-header"><div><div class="lb-title">Loyalty Shop</div><div class="lb-sub">Viewers spend points to redeem rewards</div></div></div>
           <div class="form-row" style="margin-bottom:20px;">
             <div class="field"><label>Item Slug</label><input id="shop-slug" placeholder="shoutout"></div>
             <div class="field"><label>Item Name</label><input id="shop-name" placeholder="Channel Shoutout"></div>
-            <div class="field" style="max-width:100px;"><label>Cost</label><input id="shop-cost" type="number" placeholder="200"></div>
+            <div class="field" style="max-width:100px;"><label>Cost (pts)</label><input id="shop-cost" type="number" placeholder="200"></div>
             <div class="field" style="max-width:80px;"><label>Stock (-1=∞)</label><input id="shop-stock" type="number" value="-1"></div>
             <button class="btn" style="align-self:flex-end;" onclick="addShopItem()">Add Item</button>
           </div>
           <table class="shop-table">
-            <thead><tr><th>Name</th><th>Slug</th><th>Cost</th><th>Stock</th><th>Active</th></tr></thead>
-            <tbody id="shop-tbody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No items yet</td></tr></tbody>
+            <thead><tr><th>Name</th><th>Slug (!buy)</th><th>Cost</th><th>Stock</th></tr></thead>
+            <tbody id="shop-tbody"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">No items yet — add one above</td></tr></tbody>
           </table>
         </div>
 
@@ -956,14 +1022,47 @@ function logout() {
 }
 
 // ── TABS ──
+// ── AI TOOLS ──
+let currentAiCmd = '';
+const AI_TOOL_CONFIG = {
+  ask:        { label: 'Question for AI to answer in chat', placeholder: 'What is the meaning of life?', cmd: '!ask' },
+  roast:      { label: 'Username to roast', placeholder: 'username (no @)', cmd: '!roast' },
+  compliment: { label: 'Username to compliment', placeholder: 'username (no @)', cmd: '!compliment' },
+  predict:    { label: 'Prediction question', placeholder: 'Will we hit 100 followers today?', cmd: '!predict' },
+  story:      { label: 'Theme (optional)', placeholder: 'gaming adventure in space', cmd: '!story' },
+  recap:      { label: null, cmd: '!recap' },
+  aishoutout: { label: 'Username to shoutout', placeholder: 'username (no @)', cmd: '!aishoutout' },
+  aimod:      { label: 'Message to check for toxicity', placeholder: 'Paste message here', cmd: '!aimod' },
+};
+
+function aiTool(type) {
+  currentAiCmd = type;
+  const cfg = AI_TOOL_CONFIG[type];
+  if (!cfg.label) { botCmd(cfg.cmd); toast(`✅ ${cfg.cmd} sent to chat!`); return; }
+  const area = document.getElementById('ai-input-area');
+  document.getElementById('ai-input-label').textContent = cfg.label;
+  document.getElementById('ai-input').placeholder = cfg.placeholder;
+  document.getElementById('ai-input').value = '';
+  area.style.display = 'block';
+  document.getElementById('ai-input').focus();
+}
+
+function runAiTool() {
+  const cfg   = AI_TOOL_CONFIG[currentAiCmd];
+  const input = document.getElementById('ai-input').value.trim();
+  if (!input) { toast('Enter something first'); return; }
+  botCmd(`${cfg.cmd} ${input}`);
+  toast(`✅ ${cfg.cmd} sent to chat!`);
+  document.getElementById('ai-input-area').style.display = 'none';
+}
+
 function switchTab(name, el) {
-  // Desktop tabs
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   if (el?.classList?.contains('tab')) el.classList.add('active');
-  ['lb','alerts','shop','settings'].forEach(t => {
-    document.getElementById('tab-'+t).style.display = t===name?'block':'none';
+  ['lb','alerts','ai','shop','settings'].forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    if (el) el.style.display = t===name ? 'block' : 'none';
   });
-  // Close drawers on mobile
   closeMobDrawers();
 }
 
