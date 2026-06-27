@@ -20,20 +20,22 @@ function getGroq() {
 
 async function askGroq(systemPrompt, userPrompt, maxTokens = 120) {
   const client = getGroq();
-  if (!client) { console.log('[GROQ] No API key set'); return null; }
+  if (!client) { console.log('[GROQ] No API key set — GROQ_API_KEY missing'); return null; }
   try {
     const res = await client.chat.completions.create({
-      model:    'llama3-8b-8192',
-      messages: [
+      model:       'llama3-8b-8192',
+      messages:    [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: userPrompt   }
       ],
       max_tokens:  maxTokens,
-      temperature: 0.7,
+      temperature: 0.8,
     });
-    return res.choices[0]?.message?.content?.trim() || null;
+    const text = res.choices[0]?.message?.content?.trim();
+    console.log(`[GROQ] Response: ${text?.slice(0,80)}`);
+    return text || null;
   } catch (e) {
-    console.error('[GROQ]', e.message);
+    console.error('[GROQ] Full error:', JSON.stringify(e?.error || e?.message || e));
     return null;
   }
 }
@@ -495,9 +497,10 @@ async function handleCommand(channelId, token, message, sender) {
         .from('loyalty').select('username,score')
         .eq('channel_id', channelId)
         .order('score', { ascending: false }).limit(5);
-      if (!top?.length) { await say('No data yet — keep chatting!'); return; }
-      const lines = top.map((u, i) => `${['🥇','🥈','🥉','4.','5.'][i]} @${u.username} (${u.score} pts)`);
-      await say(`🏆 TOP DEVOTED: ${lines.join(' | ')}`);
+      if (!top?.length) { await say(`💬 No loyalty data yet — start chatting to earn points!`); return; }
+      const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+      const lines  = top.map((u, i) => `${medals[i]} @${u.username} · ${u.score}pts`);
+      await say(`🏆 Most Devoted Viewers ─ ${lines.join(' ┃ ')}`);
       break;
     }
     case '!loyalty': {
@@ -506,26 +509,29 @@ async function handleCommand(channelId, token, message, sender) {
         .from('loyalty').select('*')
         .eq('channel_id', channelId)
         .eq('username', target).single();
-      if (!u) { await say(`@${target} hasn't been tracked yet.`); return; }
+      if (!u) { await say(`❓ @${target} hasn't earned any points yet — start chatting!`); return; }
       const ms   = getMilestone(u.score);
       const next = getNextMilestone(u.score);
-      // Get rank
       const { count } = await supabase.from('loyalty')
         .select('*', { count: 'exact', head: true })
         .eq('channel_id', channelId).gt('score', u.score);
       const rank = (count || 0) + 1;
-      await say(`${ms.icon} @${u.username} — Rank #${rank} | ${u.score} pts | ${ms.name}${next ? ` → next: ${next.name} @ ${next.pts} pts` : ' (MAX 👑)'}`);
+      const nextStr = next ? `📈 ${next.pts - u.score} pts to ${next.icon} ${next.name}` : `👑 MAX TIER`;
+      await say(`${ms.icon} @${u.username} ─ Rank #${rank} ┃ ${u.score} pts ┃ ${ms.name} ┃ ${nextStr}`);
       break;
     }
     case '!shoutout': {
-      if (!arg) { await say('Usage: !shoutout @username'); return; }
+      if (!arg) { await say(`📣 Usage: !shoutout @username`); return; }
       const { data: u } = await supabase
         .from('loyalty').select('*')
         .eq('channel_id', channelId)
         .eq('username', arg).single();
-      if (!u) { await say(`@${arg} hasn't chatted here yet!`); return; }
+      if (!u) {
+        await say(`📣 Shoutout to @${arg}! Go check them out on Blaze ⚡ blaze.stream/${arg}`);
+        return;
+      }
       const ms = getMilestone(u.score);
-      await say(`📣 Shoutout to @${u.username}! ${ms.icon} ${ms.name} — ${u.score} pts | ${u.msgs} msgs | ${u.subs} subs | ${u.gifts} gifts! Go show them love! ⚡`);
+      await say(`📣 Shoutout to @${u.username}! ${ms.icon} ${ms.name} ┃ ${u.score} pts ┃ ${u.msgs || 0} messages ┃ Check them out → blaze.stream/${u.username} ⚡`);
       break;
     }
     case '!milestone': {
@@ -534,11 +540,12 @@ async function handleCommand(channelId, token, message, sender) {
         .from('loyalty').select('score,username')
         .eq('channel_id', channelId)
         .eq('username', target).single();
-      if (!u) { await say(`@${target} not found.`); return; }
+      if (!u) { await say(`❓ @${target} not found — they need to chat first!`); return; }
       const ms   = getMilestone(u.score);
       const next = getNextMilestone(u.score);
-      if (!next) { await say(`👑 @${u.username} is already a LEGEND — max tier reached!`); return; }
-      await say(`${ms.icon} @${u.username} needs ${next.pts - u.score} more pts to reach ${next.icon} ${next.name}!`);
+      if (!next) { await say(`👑 @${u.username} is a LEGEND — highest tier reached! Maximum devotion! ⚡`); return; }
+      const pct  = Math.round((u.score / next.pts) * 100);
+      await say(`${ms.icon} @${u.username} ─ ${u.score}/${next.pts} pts ┃ ${pct}% to ${next.icon} ${next.name} ┃ Need ${next.pts - u.score} more pts!`);
       break;
     }
     case '!leaderboard': {
@@ -546,24 +553,28 @@ async function handleCommand(channelId, token, message, sender) {
         .from('loyalty').select('username,score')
         .eq('channel_id', channelId)
         .order('score', { ascending: false }).limit(3);
-      if (!top?.length) { await say('No data yet!'); return; }
-      const lines = top.map((u, i) => `${['🥇','🥈','🥉'][i]} @${u.username} — ${u.score} pts (${getMilestone(u.score).name})`);
-      await say(`⚡ DEVOTION LEADERBOARD ⚡ ${lines.join(' | ')} | Blaze Companion`);
+      if (!top?.length) { await say(`💬 No data yet — start chatting to earn points!`); return; }
+      const lines = top.map((u, i) => `${['🥇','🥈','🥉'][i]} @${u.username} · ${u.score}pts (${getMilestone(u.score).name})`);
+      await say(`⚡ BlazGuy Loyalty Board ─ ${lines.join(' ┃ ')} ─ Type !loyalty to check your rank!`);
       break;
     }
     case '!hug': {
-      if (!arg) { await say('Usage: !hug @username'); return; }
+      if (!arg) { await say(`🤗 Usage: !hug @username`); return; }
       const { data: u } = await supabase
         .from('loyalty').select('score').eq('channel_id', channelId).eq('username', arg).single();
-      await say(`🤗 Big hug to @${arg}! ${getMilestone(u?.score||0).icon} Blaze Companion loves our community! ⚡💛`);
+      const ms = getMilestone(u?.score || 0);
+      await say(`🤗 Sending a big hug to @${arg}! ${ms.icon} ${ms.name} member of this amazing community! 💛`);
       break;
     }
     case '!uptime': {
       const mins  = Math.round((Date.now() - startedAt) / 60000);
+      const hours = Math.floor(mins / 60);
+      const remMins = mins % 60;
+      const timeStr = hours > 0 ? `${hours}h ${remMins}m` : `${mins}m`;
       const { count } = await supabase
         .from('loyalty').select('*', { count: 'exact', head: true })
         .eq('channel_id', channelId);
-      await say(`⚡ Blaze Companion running for ${mins} min. Tracking ${count || 0} members — data saved forever in Supabase!`);
+      await say(`⚡ BlazGuy ─ Online for ${timeStr} ┃ Tracking ${count || 0} viewers ┃ Type !commands to see all features!`);
       break;
     }
 
@@ -743,10 +754,9 @@ async function handleCommand(channelId, token, message, sender) {
       break;
     }
     case '!commands': {
-      const { data: cmds } = await supabase.from('custom_commands').select('trigger').eq('channel_id', channelId).limit(20);
-      const builtins = '!devoted !loyalty !shoutout !leaderboard !milestone !balance !shop !buy !so !brb !poll !setphrase !phrasestats !addcmd !addtimer !coinflip !roll !rps !trivia !heist !games !uptime';
-      const custom   = cmds?.map(c => c.trigger).join(' ') || '(none yet — use !addcmd)';
-      await say(`📋 Built-in: ${builtins} | Custom: ${custom}`);
+      const { data: cmds } = await supabase.from('custom_commands').select('trigger').eq('channel_id', channelId).limit(10);
+      const custom = cmds?.map(c => c.trigger).join(' ') || 'none yet';
+      await say(`⚡ BlazGuy Commands ─ 🏆 Loyalty: !devoted !loyalty !leaderboard !milestone !balance !shoutout ─ 🎮 Games: !coinflip !roll !rps !trivia !heist ─ 🛒 Shop: !shop !buy ─ 🤖 AI: !ask !roast !compliment !predict !story ─ 📋 Custom: ${custom} ─ Type !help [command] for details`);
       break;
     }
 
@@ -1139,7 +1149,8 @@ async function handleEvent(channelId, token, type, payload) {
       const settings = await getSettings(channelId);
       await upsertLoyalty(channelId, follower.id, follower.username, follower.displayName, follower.avatarUrl, 'follow', 1, { isFollower: true });
       await pushAlert(channelId, 'follow', `${follower.displayName || follower.username} followed! (+10 pts)`, '💙');
-      if (settings.events_on) await sendChat(channelId, token, `💙 Welcome @${follower.username} to the family! +10 loyalty pts!`);
+      if (settings.events_on) await sendChat(channelId, BOT_API_TOKEN,
+        `💙 @${follower.username} just followed! Welcome to the community — you earned 10 loyalty pts! Type !loyalty to check your rank ⚡`);
       break;
     }
     case 'channel.unfollow': {
@@ -1153,7 +1164,8 @@ async function handleEvent(channelId, token, type, payload) {
       const settings = await getSettings(channelId);
       await upsertLoyalty(channelId, subscriber.id, subscriber.username, subscriber.displayName, subscriber.avatarUrl, 'sub', 1, { isSubscriber: true });
       await pushAlert(channelId, 'sub', `${subscriber.displayName || subscriber.username} subscribed! (+50 pts)`, '💜');
-      if (settings.events_on) await sendChat(channelId, token, `💜 @${subscriber.username} just subscribed! +50 loyalty pts! Thank you! ⚡`);
+      if (settings.events_on) await sendChat(channelId, BOT_API_TOKEN,
+        `💜 @${subscriber.username} just subscribed! HUGE thank you! +50 loyalty pts added ┃ You are now a ${getMilestone(50).name} ${getMilestone(50).icon} ⚡`);
       break;
     }
     case 'channel.subscription.gift': {
@@ -1161,7 +1173,8 @@ async function handleEvent(channelId, token, type, payload) {
       const settings = await getSettings(channelId);
       await upsertLoyalty(channelId, sender.id, sender.username, sender.displayName, sender.avatarUrl, 'gift', giftCount);
       await pushAlert(channelId, 'gift', `${sender.displayName || sender.username} gifted ${giftCount} sub${giftCount > 1 ? 's' : ''}!`, '🎁');
-      if (settings.events_on) await sendChat(channelId, token, `🎁 @${sender.username} just gifted ${giftCount} sub${giftCount>1?'s':''}! LEGENDARY! +${SCORES.gift * giftCount} pts ⚡`);
+      if (settings.events_on) await sendChat(channelId, BOT_API_TOKEN,
+        `🎁 @${sender.username} just gifted ${giftCount} sub${giftCount > 1 ? 's' : ''} to the community! LEGENDARY! +${SCORES.gift * giftCount} loyalty pts ┃ Thank you so much! ⚡🔥`);
       break;
     }
     case 'channel.vote': {
@@ -1173,14 +1186,15 @@ async function handleEvent(channelId, token, type, payload) {
     case 'channel.raid': {
       const { raider } = payload;
       await pushAlert(channelId, 'raid', `RAID from ${raider.displayName || raider.username}!`, '🚨');
-      await sendChat(channelId, token, `🚨 RAID ALERT! Welcome @${raider.displayName || raider.username} and their crew! ⚡`);
+      await sendChat(channelId, BOT_API_TOKEN,
+        `🚨 RAID INCOMING! @${raider.displayName || raider.username} is raiding with their crew! Welcome everyone — type !commands to see what BlazGuy can do! ⚡🔥`);
       break;
     }
     case 'channel.ban':      await pushAlert(channelId, 'mod', `${payload.bannedUser?.username} was banned.`, '🔨'); break;
     case 'channel.unban':    await pushAlert(channelId, 'mod', `${payload.unbannedUser?.username} was unbanned.`, '✅'); break;
-    case 'channel.moderate': await pushAlert(channelId, 'mod', `Mod: ${payload.action} on ${payload.targetUser?.username}`, '🛡'); break;
-    case 'stream.online':    await pushAlert(channelId, 'stream', `Stream LIVE! "${payload.title}"`, '🟢'); break;
-    case 'stream.offline':   await pushAlert(channelId, 'stream', `Stream ended. ${Math.round((payload.durationSeconds || 0) / 60)} min.`, '🔴'); break;
+    case 'channel.moderate': await pushAlert(channelId, 'mod', `Mod action: ${payload.action} on @${payload.targetUser?.username}`, '🛡'); break;
+    case 'stream.online':    await pushAlert(channelId, 'stream', `Stream is LIVE! "${payload.title}"`, '🟢'); break;
+    case 'stream.offline':   await pushAlert(channelId, 'stream', `Stream ended. Duration: ${Math.round((payload.durationSeconds || 0) / 60)} min.`, '🔴'); break;
   }
 }
 
