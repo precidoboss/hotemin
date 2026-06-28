@@ -512,7 +512,7 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 
         <!-- AI TOOLS -->
         <div id="tab-ai" style="display:none;">
-          <div class="lb-header"><div><div class="lb-title">AI Tools</div><div class="lb-sub">Powered by Groq · Llama 3 · Free</div></div></div>
+          <div class="lb-header"><div><div class="lb-title">AI Tools</div><div class="lb-sub">Powered by Google Gemini · Free</div></div></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
             <div class="ai-tool-card" onclick="aiTool('ask')">
               <div class="ai-icon">🤖</div>
@@ -709,11 +709,11 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
     <button class="mob-nav-btn" onclick="switchTab('alerts',this);mobNavActive(this)" id="mobnav-alerts">
       <span class="ni">🔔</span>Alerts
     </button>
-    <button class="mob-nav-btn" onclick="openMobChat()" id="mobnav-chat">
-      <span class="ni">💬</span>Chat
+    <button class="mob-nav-btn" onclick="switchTab('cmds',this);mobNavActive(this)" id="mobnav-cmds-tab">
+      <span class="ni">📋</span>Commands
     </button>
-    <button class="mob-nav-btn" onclick="openMobCmds()" id="mobnav-cmds">
-      <span class="ni">⚡</span>Commands
+    <button class="mob-nav-btn" onclick="switchTab('ai',this);mobNavActive(this)" id="mobnav-ai">
+      <span class="ni">🤖</span>AI
     </button>
     <button class="mob-nav-btn" onclick="switchTab('settings',this);mobNavActive(this)" id="mobnav-settings">
       <span class="ni">⚙</span>Settings
@@ -773,33 +773,29 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 <div id="toast"></div>
 
 <script>
-// ── CONFIG ──
-const BOT_URL    = 'https://hotemin.onrender.com';
-const CLIENT_ID  = 'UR4ghwgTTJ2rAE1_KBZgmCKmkvQtO4ux';
-const CLIENT_SECRET = 'IFwFHaqzi_sA0FfJ9nWiQSR0ug3GPUWZMr0qw3LvMZ0';
-const REDIRECT   = window.location.href.split('?')[0];
-// Updated scopes — add channel.follow so bot can follow streamers
-const SCOPES     = ['users.read','offline.access','channel.moderate','users.bot','channel.follow'];
+// ── CONFIG — no secrets here, all proxied through backend ──
+const BOT_URL   = 'https://hotemin.onrender.com';
+const CLIENT_ID = 'UR4ghwgTTJ2rAE1_KBZgmCKmkvQtO4ux';
+const REDIRECT  = window.location.href.split('?')[0];
 
 let accessToken = '';
 let channelId   = '';
 let pollTimer   = null;
-let lastAlertId = 0;
 
-// ── OAUTH ──
+// ── OAUTH — proxied through backend so client secret never touches frontend ──
 async function startOAuth() {
   try {
-    const res  = await fetch('https://blaze.stream/bapi/oauth2/generate-auth-url', {
-      method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify({ clientId:CLIENT_ID, clientSecret:CLIENT_SECRET, redirectUri:REDIRECT, scopes:SCOPES })
+    const res  = await fetch(`${BOT_URL}/oauth/auth-url`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ redirectUri: REDIRECT })
     });
     const data = await res.json();
     if (data.url) {
-      sessionStorage.setItem('bc_state', data.state);
+      sessionStorage.setItem('bc_state',    data.state);
       sessionStorage.setItem('bc_verifier', data.codeVerifier);
       window.location.href = data.url;
-    } else { toast('OAuth error: ' + JSON.stringify(data)); }
-  } catch(e) { toast('Login failed: ' + e.message); }
+    } else { toast('OAuth error: ' + JSON.stringify(data), true); }
+  } catch(e) { toast('Login failed: ' + e.message, true); }
 }
 
 async function handleCallback() {
@@ -808,10 +804,12 @@ async function handleCallback() {
   if (!code) return;
   window.history.replaceState({}, '', window.location.pathname);
   try {
-    const res  = await fetch('https://blaze.stream/bapi/oauth2/token', {
-      method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify({ clientId:CLIENT_ID, clientSecret:CLIENT_SECRET, code,
-        codeVerifier: sessionStorage.getItem('bc_verifier')||'', redirectUri:REDIRECT, grantType:'authorization_code' })
+    const res  = await fetch(`${BOT_URL}/oauth/token`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        code, redirectUri: REDIRECT,
+        codeVerifier: sessionStorage.getItem('bc_verifier') || ''
+      })
     });
     const data = await res.json();
     if (data.accessToken) {
@@ -819,8 +817,8 @@ async function handleCallback() {
       sessionStorage.setItem('bc_token', accessToken);
       if (data.refreshToken) sessionStorage.setItem('bc_refresh', data.refreshToken);
       await loadProfile();
-    }
-  } catch(e) { toast('Token exchange failed'); }
+    } else { toast('Token error: ' + JSON.stringify(data), true); }
+  } catch(e) { toast('Callback failed: ' + e.message, true); }
 }
 
 async function loadProfile() {
@@ -1125,12 +1123,19 @@ function switchTab(name, el) {
 const isMobile = () => window.innerWidth <= 768;
 
 function initMobileUI() {
-  if (!isMobile()) return;
-  document.getElementById('mob-stats-bar').style.display = 'flex';
-  document.getElementById('mob-nav').style.display = 'flex';
-  // Move main-tabs inside dash-main and hide on mobile (nav replaces it)
-  document.querySelector('.main-tabs').style.display = 'none';
+  const mobile = isMobile();
+  const statsBar = document.getElementById('mob-stats-bar');
+  const nav      = document.getElementById('mob-nav');
+  const mainTabs = document.querySelector('.main-tabs');
+  if (statsBar) statsBar.style.display = mobile ? 'flex' : 'none';
+  if (nav)      nav.style.display      = mobile ? 'flex' : 'none';
+  if (mainTabs) mainTabs.style.display = mobile ? 'none' : 'flex';
 }
+
+// Run on load and resize
+window.addEventListener('resize', initMobileUI);
+// Run immediately in case already on mobile
+document.addEventListener('DOMContentLoaded', initMobileUI);
 
 function mobNavActive(el) {
   document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
