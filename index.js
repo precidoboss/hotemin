@@ -1227,7 +1227,7 @@ function connectChannel(channelId, token) {
       console.log(`[${channelId.slice(0,8)}] LIVE — loyalty tracking active`);
       return;
     }
-    handleEvent(channelId, token, metadata.subscriptionType, payload);
+    handleEvent(channelId, BOT_API_TOKEN || token, metadata.subscriptionType, payload);
   });
 
   sock.on('disconnect', async (reason) => {
@@ -1278,7 +1278,7 @@ async function bootChannels() {
 // ── REST API ──
 app.get('/', (req, res) => {
   const connected = Object.values(sockets).filter(s => s.connected).length;
-  res.json({ name: 'Blaze Companion Bot', status: 'ok', channels: Object.keys(sockets).length, connected, uptime: Math.round((Date.now() - startedAt) / 1000) });
+  res.json({ name: 'BlazGuy Bot', status: 'ok', channels: Object.keys(sockets).length, connected, uptime: Math.round((Date.now() - startedAt) / 1000) });
 });
 
 app.get('/health', (req, res) => {
@@ -1390,6 +1390,14 @@ app.get('/api/debug', (req, res) => {
 // ── START ──
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
-  console.log(`[BOT] Blaze Companion running on port ${PORT}`);
-  await bootChannels(); // ← auto-reconnect all saved channels on every boot
+  console.log(`[BOT] BlazGuy running on port ${PORT}`);
+  console.log(`[BOT] API token length: ${BOT_API_TOKEN?.length || 0}`);
+  console.log(`[BOT] Session token set: ${!!BOT_SESSION_TOKEN}`);
+  console.log(`[BOT] Refresh token set: ${!!BOT_REFRESH_TOKEN}`);
+  console.log(`[BOT] Groq set: ${!!process.env.GROQ_API_KEY}`);
+  if (!BOT_API_TOKEN)        console.error('[BOT] ⚠ BLAZE_BOT_TOKEN missing — chat will fail!');
+  if (!BOT_SESSION_TOKEN)    console.warn('[BOT]  ⚠ BLAZE_SESSION_TOKEN missing — follow on !join will fail!');
+  if (!BOT_REFRESH_TOKEN)    console.warn('[BOT]  ⚠ BLAZE_BOT_REFRESH_TOKEN missing — auto-refresh disabled!');
+  if (!process.env.GROQ_API_KEY) console.warn('[BOT] ⚠ GROQ_API_KEY missing — AI commands disabled!');
+  await bootChannels();
 });
