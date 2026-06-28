@@ -179,10 +179,15 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 .toast-item{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:12px 16px;font-size:13px;min-width:260px;animation:toastin .3s ease;box-shadow:0 8px 30px rgba(0,0,0,.4);}
 @keyframes toastin{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 
+/* Hide mobile-only elements on desktop */
+.mob-nav { display: none; }
+.mob-stats { display: none; }
+
 /* ── MOBILE ── */
 @media(max-width:768px){
   /* Hero */
   .hero{margin:32px auto;padding:0 16px;}
+  #dash-view { padding-bottom: 60px; }
   .hero h1{font-size:28px;}
   .hero p{font-size:14px;}
   .hero-steps{grid-template-columns:1fr;gap:10px;}
@@ -256,14 +261,16 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
   .form-row .btn{width:100%;}
   .field{width:100%!important;max-width:100%!important;}
 
-  /* Bottom nav bar */
+  /* Bottom nav bar - pure CSS, no JS display toggle needed */
   .mob-nav{
     display:flex;
     background:var(--surface);
     border-top:1px solid var(--border);
-    flex-shrink:0;
     padding:0;
+    padding-bottom:env(safe-area-inset-bottom, 0px);
     z-index:40;
+    position:fixed;
+    bottom:0;left:0;right:0;
   }
   .mob-nav-btn{
     flex:1;
@@ -701,25 +708,6 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
   </div>
   </div><!-- end .dash -->
 
-  <!-- MOBILE BOTTOM NAV -->
-  <nav class="mob-nav" id="mob-nav" style="display:none;">
-    <button class="mob-nav-btn active" onclick="switchTab('lb',this);mobNavActive(this)" id="mobnav-lb">
-      <span class="ni">🏆</span>Board
-    </button>
-    <button class="mob-nav-btn" onclick="switchTab('alerts',this);mobNavActive(this)" id="mobnav-alerts">
-      <span class="ni">🔔</span>Alerts
-    </button>
-    <button class="mob-nav-btn" onclick="switchTab('cmds',this);mobNavActive(this)" id="mobnav-cmds-tab">
-      <span class="ni">📋</span>Commands
-    </button>
-    <button class="mob-nav-btn" onclick="switchTab('ai',this);mobNavActive(this)" id="mobnav-ai">
-      <span class="ni">🤖</span>AI
-    </button>
-    <button class="mob-nav-btn" onclick="switchTab('settings',this);mobNavActive(this)" id="mobnav-settings">
-      <span class="ni">⚙</span>Settings
-    </button>
-  </nav>
-
   <!-- MOBILE OVERLAY -->
   <div class="mob-overlay" id="mob-overlay" onclick="closeMobDrawers()"></div>
 
@@ -769,6 +757,25 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
   </div>
 
 </div><!-- end #dash-view -->
+
+<!-- MOBILE BOTTOM NAV — outside dash-view so it always renders -->
+<nav class="mob-nav" id="mob-nav">
+  <button class="mob-nav-btn active" onclick="switchTab('lb',this);mobNavActive(this)" id="mobnav-lb">
+    <span class="ni">🏆</span>Board
+  </button>
+  <button class="mob-nav-btn" onclick="switchTab('alerts',this);mobNavActive(this)" id="mobnav-alerts">
+    <span class="ni">🔔</span>Alerts
+  </button>
+  <button class="mob-nav-btn" onclick="switchTab('cmds',this);mobNavActive(this)" id="mobnav-cmds-tab">
+    <span class="ni">📋</span>Commands
+  </button>
+  <button class="mob-nav-btn" onclick="switchTab('ai',this);mobNavActive(this)" id="mobnav-ai">
+    <span class="ni">🤖</span>AI
+  </button>
+  <button class="mob-nav-btn" onclick="switchTab('settings',this);mobNavActive(this)" id="mobnav-settings">
+    <span class="ni">⚙</span>Settings
+  </button>
+</nav>
 
 <div id="toast"></div>
 
@@ -1123,19 +1130,14 @@ function switchTab(name, el) {
 const isMobile = () => window.innerWidth <= 768;
 
 function initMobileUI() {
-  const mobile = isMobile();
+  const mobile   = isMobile();
   const statsBar = document.getElementById('mob-stats-bar');
-  const nav      = document.getElementById('mob-nav');
   const mainTabs = document.querySelector('.main-tabs');
   if (statsBar) statsBar.style.display = mobile ? 'flex' : 'none';
-  if (nav)      nav.style.display      = mobile ? 'flex' : 'none';
   if (mainTabs) mainTabs.style.display = mobile ? 'none' : 'flex';
 }
 
-// Run on load and resize
 window.addEventListener('resize', initMobileUI);
-// Run immediately in case already on mobile
-document.addEventListener('DOMContentLoaded', initMobileUI);
 
 function mobNavActive(el) {
   document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
