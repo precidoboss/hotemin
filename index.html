@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BlazGuy — Streamer Dashboard</title>
+<title>blazeguy — Streamer Dashboard</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -159,6 +159,13 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 /* EMPTY */
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;color:var(--muted);text-align:center;gap:8px;}
 .empty-icon{font-size:28px;opacity:.4;}
+
+/* COMMAND CARDS */
+.cmds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:4px;}
+.cmd-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s;}
+.cmd-card:hover{border-color:var(--blaze);background:var(--blazedim);}
+.cmd-card code{color:var(--blaze);font-family:'JetBrains Mono',monospace;font-size:11px;display:block;margin-bottom:3px;}
+.cmd-card span{color:var(--muted2);font-size:11px;}
 
 /* AI TOOL CARDS */
 .ai-tool-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:border-color .15s,background .15s;text-align:center;}
@@ -385,7 +392,7 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 <body>
 
 <div class="topbar">
-  <div class="logo"><div class="logo-dot"></div> BlazGuy</div>
+  <div class="logo"><div class="logo-dot"></div> blazeguy</div>
   <div class="topbar-right">
     <div id="conn-pill" class="conn-pill off">Not Connected</div>
     <div id="user-area"></div>
@@ -402,7 +409,7 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
       <div class="step">
         <div class="step-num">Step 1</div>
         <h3>Follow Us on Blaze</h3>
-        <p>Visit <strong style="color:var(--blaze)">blaze.stream/BlazGuy</strong> and follow the channel — required to use !join.</p>
+        <p>Visit <strong style="color:var(--blaze)">blaze.stream/blazeguy</strong> and follow the channel — required to use !join.</p>
       </div>
       <div class="step">
         <div class="step-num">Step 2</div>
@@ -412,7 +419,7 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
       <div class="step">
         <div class="step-num">Step 3</div>
         <h3>Mod the bot</h3>
-        <p>Type <strong style="color:var(--blaze)">/mod BlazGuy</strong> in your chat to unlock full moderation features.</p>
+        <p>Type <strong style="color:var(--blaze)">/mod blazeguy</strong> in your chat to unlock full moderation features.</p>
       </div>
     </div>
     <button class="hero-cta" onclick="startOAuth()">⚡ Login with Blaze to manage your dashboard</button>
@@ -476,6 +483,7 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
         <div class="tab active" onclick="switchTab('lb',this)">🏆 Board</div>
         <div class="tab" onclick="switchTab('alerts',this)">🔔 Alerts</div>
         <div class="tab" onclick="switchTab('ai',this)">🤖 AI Tools</div>
+        <div class="tab" onclick="switchTab('cmds',this)">📋 Commands</div>
         <div class="tab" onclick="switchTab('shop',this)">🛒 Shop</div>
         <div class="tab" onclick="switchTab('settings',this)">⚙ Settings</div>
       </div>
@@ -553,6 +561,72 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
               <button class="btn" onclick="runAiTool()">Run in Chat ⚡</button>
               <button class="btn-ghost" onclick="document.getElementById('ai-input-area').style.display='none'">Cancel</button>
             </div>
+          </div>
+        </div>
+
+        <!-- COMMANDS TAB -->
+        <div id="tab-cmds" style="display:none;">
+          <div class="lb-header"><div><div class="lb-title">All Commands</div><div class="lb-sub">Click any command to run it in chat</div></div></div>
+          <div style="display:flex;flex-direction:column;gap:16px;">
+
+            <div><div class="sb-label" style="margin-bottom:8px;">🏆 Loyalty</div>
+            <div class="cmds-grid">
+              <div class="cmd-card" onclick="quickRunCmd('!devoted')"><code>!devoted</code><span>Top 5 most loyal viewers</span></div>
+              <div class="cmd-card" onclick="quickRunCmd('!leaderboard')"><code>!leaderboard</code><span>Post top 3 in chat</span></div>
+              <div class="cmd-card" onclick="promptRunCmd('!loyalty','Username (optional)')"><code>!loyalty [@user]</code><span>Check rank & score</span></div>
+              <div class="cmd-card" onclick="promptRunCmd('!milestone','Username (optional)')"><code>!milestone [@user]</code><span>Progress to next tier</span></div>
+              <div class="cmd-card" onclick="promptRunCmd('!balance','Username (optional)')"><code>!balance [@user]</code><span>Point balance</span></div>
+              <div class="cmd-card" onclick="promptRunCmd('!shoutout','Username')"><code>!shoutout @user</code><span>Shoutout with stats</span></div>
+            </div></div>
+
+            <div><div class="sb-label" style="margin-bottom:8px;">🎮 Games</div>
+            <div class="cmds-grid">
+              <div class="cmd-card" onclick="quickRunCmd('!coinflip heads 10')"><code>!coinflip heads 10</code><span>Bet pts on heads/tails</span></div>
+              <div class="cmd-card" onclick="quickRunCmd('!roll 6 10')"><code>!roll 6 10</code><span>Roll dice, bet pts</span></div>
+              <div class="cmd-card" onclick="quickRunCmd('!rps rock 10')"><code>!rps rock 10</code><span>Rock paper scissors</span></div>
+              <div class="cmd-card" onclick="quickRunCmd('!trivia')"><code>!trivia</code><span>Start a trivia question</span></div>
+              <div class="cmd-card" onclick="quickRunCmd('!heist 15')"><code>!heist 15</code><span>Start a crew heist</span></div>
+              <div class="cmd-card" onclick="quickRunCmd('!games')"><code>!games</code><span>Show all games in chat</span></div>
+            </div></div>
+
+            <div><div class="sb-label" style="margin-bottom:8px;">🤖 AI</div>
+            <div class="cmds-grid">
+              <div class="cmd-card" onclick="promptRunCmd('!ask','Question for AI')"><code>!ask question</code><span>AI answers in chat</span></div>
+              <div class="cmd-card" onclick="promptRunCmd('!roast','Username')"><code>!roast @user</code><span>Funny AI roast</span></div>
+              <div class="cmd-card" onclick="promptRunCmd('!compliment','Username')"><code>!compliment @user</code><span>AI compliment</span></div>
+              <div class="cmd-card" onclick="quickRunCmd('!recap')"><code>!recap</code><span>AI stream summary</span></div>
+              <div class="cmd-card" onclick="promptRunCmd('!predict','Question')"><code>!predict question</code><span>AI prediction</span></div>
+              <div class="cmd-card" onclick="quickRunCmd('!story')"><code>!story</code><span>AI story with top viewers</span></div>
+            </div></div>
+
+            <div><div class="sb-label" style="margin-bottom:8px;">🛒 Shop</div>
+            <div class="cmds-grid">
+              <div class="cmd-card" onclick="quickRunCmd('!shop')"><code>!shop</code><span>Show shop items</span></div>
+              <div class="cmd-card" onclick="promptRunCmd('!buy','Item slug')"><code>!buy slug</code><span>Redeem an item</span></div>
+              <div class="cmd-card" onclick="promptRunCmd('!additem','slug Name cost (e.g. so Shoutout 200)')"><code>!additem</code><span>Add shop item</span></div>
+            </div></div>
+
+            <div><div class="sb-label" style="margin-bottom:8px;">⚙ Stream Tools</div>
+            <div class="cmds-grid">
+              <div class="cmd-card" onclick="promptRunCmd('!brb','Minutes')"><code>!brb [mins]</code><span>BRB mode timer</span></div>
+              <div class="cmd-card" onclick="quickRunCmd('!back')"><code>!back</code><span>Return from BRB</span></div>
+              <div class="cmd-card" onclick="promptRunCmd('!poll','Question? | Option A | Option B')"><code>!poll</code><span>Live viewer poll</span></div>
+              <div class="cmd-card" onclick="quickRunCmd('!endpoll')"><code>!endpoll</code><span>End active poll</span></div>
+              <div class="cmd-card" onclick="promptRunCmd('!so','Username')"><code>!so @user</code><span>Shoutout + clip</span></div>
+              <div class="cmd-card" onclick="promptRunCmd('!hug','Username')"><code>!hug @user</code><span>Send a hug</span></div>
+              <div class="cmd-card" onclick="quickRunCmd('!uptime')"><code>!uptime</code><span>Bot uptime & stats</span></div>
+              <div class="cmd-card" onclick="quickRunCmd('!commands')"><code>!commands</code><span>List in chat</span></div>
+            </div></div>
+
+            <div><div class="sb-label" style="margin-bottom:8px;">📋 Custom Commands</div>
+            <div class="form-row" style="margin-bottom:10px;">
+              <div class="field"><label>Trigger</label><input id="cc-trigger" placeholder="!discord"></div>
+              <div class="field"><label>Response ({user} = chatter)</label><input id="cc-response" placeholder="Join: discord.gg/link"></div>
+              <button class="btn" onclick="addQuickCmd()">Add</button>
+            </div>
+            <div id="custom-cmds-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+            </div>
+
           </div>
         </div>
 
@@ -695,6 +769,8 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
   </div>
 
 </div><!-- end #dash-view -->
+
+<div id="toast"></div>
 
 <script>
 // ── CONFIG ──
@@ -980,7 +1056,7 @@ async function botCmd(message) {
 
 // ── LEAVE BOT ──
 async function leaveBot() {
-  if (!confirm('Remove BlazGuy from your channel? Your loyalty data is kept.')) return;
+  if (!confirm('Remove blazeguy from your channel? Your loyalty data is kept.')) return;
   await fetch(`${BOT_URL}/api/disconnect`, {
     method:'POST', headers:{'content-type':'application/json'},
     body: JSON.stringify({ channelId })
@@ -1037,10 +1113,11 @@ function runAiTool() {
 function switchTab(name, el) {
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   if (el?.classList?.contains('tab')) el.classList.add('active');
-  ['lb','alerts','ai','shop','settings'].forEach(t => {
+  ['lb','alerts','ai','cmds','shop','settings'].forEach(t => {
     const el = document.getElementById('tab-'+t);
     if (el) el.style.display = t===name ? 'block' : 'none';
   });
+  if (name === 'cmds') loadCustomCmds();
   closeMobDrawers();
 }
 
@@ -1140,11 +1217,42 @@ function addMobChatMsg(html) {
   feed.scrollTop = feed.scrollHeight;
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function toast(msg){
-  const c=document.getElementById('toast');
-  const d=document.createElement('div');
-  d.className='toast-item'; d.textContent=msg;
-  c.appendChild(d); setTimeout(()=>d.remove(),3500);
+function toast(msg, isError=false){
+  let c = document.getElementById('toast');
+  if (!c) { c = document.createElement('div'); c.id='toast'; document.body.appendChild(c); }
+  const d = document.createElement('div');
+  d.className = 'toast-item';
+  if (isError) d.style.cssText = 'border-color:rgba(240,80,80,.4);color:#F05050;';
+  d.textContent = msg;
+  c.appendChild(d);
+  setTimeout(() => d.remove(), 3500);
+}
+
+async function quickRunCmd(cmd) {
+  await botCmd(cmd);
+  toast(`✅ ${cmd} sent`);
+}
+async function promptRunCmd(cmd, label) {
+  const input = prompt(`${cmd}\n${label}:`);
+  if (input === null) return;
+  const full = input ? `${cmd} ${input}` : cmd;
+  await botCmd(full);
+  toast(`✅ Sent: ${full}`);
+}
+async function loadCustomCmds() {
+  const area = document.getElementById('custom-cmds-list');
+  if (!area || !channelId) return;
+  area.innerHTML = '<div style="color:var(--muted);font-size:12px;">No custom commands yet — add one above</div>';
+}
+async function addQuickCmd() {
+  const trigger  = document.getElementById('cc-trigger').value.trim();
+  const response = document.getElementById('cc-response').value.trim();
+  if (!trigger || !response) { toast('Fill in both fields', true); return; }
+  const t = trigger.startsWith('!') ? trigger : '!' + trigger;
+  await botCmd(`!addcmd ${t} ${response}`);
+  document.getElementById('cc-trigger').value = '';
+  document.getElementById('cc-response').value = '';
+  toast(`✅ ${t} added!`);
 }
 
 // ── RESTORE SESSION ──
