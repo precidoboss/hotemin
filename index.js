@@ -3,46 +3,40 @@ const cors       = require('cors');
 const { io }     = require('socket.io-client');
 const fetch      = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
-const Groq       = require('groq-sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ── GROQ AI ──
-let groq = null;
-function getGroq() {
-  if (!groq && process.env.GROQ_API_KEY) {
-    groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// ── GEMINI AI ──
+let gemini = null;
+function getGemini() {
+  if (!gemini && process.env.GEMINI_API_KEY) {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    gemini = genAI.getGenerativeModel({ model: 'gemini-pro' });
   }
-  return groq;
+  return gemini;
 }
 
-async function askGroq(systemPrompt, userPrompt, maxTokens = 120) {
-  const client = getGroq();
-  if (!client) { console.log('[GROQ] No API key set — GROQ_API_KEY missing'); return null; }
+async function askAI(systemPrompt, userPrompt) {
+  const model = getGemini();
+  if (!model) { console.log('[AI] GEMINI_API_KEY not set'); return null; }
   try {
-    const res = await client.chat.completions.create({
-      model:       'llama3-8b-8192',
-      messages:    [
-        { role: 'system', content: systemPrompt },
-        { role: 'user',   content: userPrompt   }
-      ],
-      max_tokens:  maxTokens,
-      temperature: 0.8,
-    });
-    const text = res.choices[0]?.message?.content?.trim();
-    console.log(`[GROQ] Response: ${text?.slice(0,80)}`);
+    const prompt = `${systemPrompt}\n\nUser: ${userPrompt}\nReply:`;
+    const result = await model.generateContent(prompt);
+    const text   = result.response.text()?.trim();
+    console.log(`[AI] Response: ${text?.slice(0,80)}`);
     return text || null;
   } catch (e) {
-    console.error('[GROQ] Full error:', JSON.stringify(e?.error || e?.message || e));
+    console.error('[AI] Gemini error:', e.message);
     return null;
   }
 }
 
 // ── CONFIG ──
 const CLIENT_ID     = process.env.BLAZE_CLIENT_ID     || 'UR4ghwgTTJ2rAE1_KBZgmCKmkvQtO4ux';
-const CLIENT_SECRET = process.env.BLAZE_CLIENT_SECRET || 'IFwFHaqzi_sA0FfJ9nWiQSR0ug3GPUWZMr0qw3LvMZ0';
+const CLIENT_SECRET = process.env.BLAZE_CLIENT_SECRET || '';
 const API           = 'https://api.blaze.stream/v1';
 const startedAt     = Date.now();
 
@@ -1025,17 +1019,17 @@ async function handleCommand(channelId, token, message, sender) {
 
     case '!ask': {
       if (!arg) { await say(`🤖 Usage: !ask your question — e.g. !ask what is a good stream schedule?`); return; }
-      if (!process.env.GROQ_API_KEY) { await say(`🤖 AI is not configured yet — GROQ_API_KEY not set`); return; }
+      if (!process.env.GEMINI_API_KEY) { await say(`🤖 AI is not configured yet — GEMINI_API_KEY not set`); return; }
       const settings = await getSettings(channelId);
       await say(`🤖 Thinking…`);
-      const answer = await askGroq(
+      const answer = await askAI(
         `You are blazeguy, a fun helpful Blaze.stream chat bot. Keep answers SHORT (1-2 sentences max), casual, friendly. No markdown, no asterisks, plain text only. Channel loyalty currency: "${settings.currency_name}".`,
         arg, 100
       );
       if (answer) {
         await say(`🤖 @${sender.username} — ${answer}`);
       } else {
-        await say(`🤖 @${sender.username} Groq AI timed out — check GROQ_API_KEY in Render env vars and try again!`);
+        await say(`🤖 @${sender.username} Gemini AI error — check GEMINI_API_KEY in Render env vars and try again!`);
       }
       break;
     }
@@ -1045,7 +1039,7 @@ async function handleCommand(channelId, token, message, sender) {
       const target = arg.replace('@','');
       const { data: u } = await supabase.from('loyalty').select('score,msgs,username').eq('channel_id', channelId).eq('username', target).single();
       const context = u ? `They have ${u.score} loyalty points and sent ${u.msgs} messages.` : `They haven't chatted much.`;
-      const roast = await askGroq(
+      const roast = await askAI(
         `You are a funny, savage but friendly Blaze.stream chat bot called blazeguy. Write a single short roast (1 sentence, max 20 words) about a viewer. Keep it fun, not mean. No markdown.`,
         `Roast the viewer named "${target}". ${context}`,
         60
@@ -1058,7 +1052,7 @@ async function handleCommand(channelId, token, message, sender) {
       const target = (arg || sender.username).replace('@','');
       const { data: u } = await supabase.from('loyalty').select('score,milestone').eq('channel_id', channelId).eq('username', target).single();
       const context = u ? `They have ${u.score} loyalty points and are a "${u.milestone}" member.` : '';
-      const comp = await askGroq(
+      const comp = await askAI(
         `You are blazeguy, a warm and hype Blaze.stream chat bot. Write a single genuine compliment (1 sentence, max 20 words) for a viewer. Energetic and fun. No markdown.`,
         `Compliment the viewer named "${target}". ${context}`,
         60
@@ -1070,7 +1064,7 @@ async function handleCommand(channelId, token, message, sender) {
     case '!aimod': {
       // Mod-only: checks if a message is toxic
       if (!arg) { await say(`Usage: !aimod [message to check]`); return; }
-      const verdict = await askGroq(
+      const verdict = await askAI(
         `You are a chat moderation AI for a live stream. Analyse the message and reply with ONLY one of: SAFE, WARN, or BAN — then a single short reason (max 8 words). No markdown.`,
         `Message: "${arg}"`,
         40
@@ -1085,7 +1079,7 @@ async function handleCommand(channelId, token, message, sender) {
       const { data: recentAlerts } = await supabase.from('alerts').select('type,message').eq('channel_id', channelId).order('created_at', { ascending: false }).limit(10);
       const topStr    = topUsers?.map((u,i) => `${i+1}. @${u.username} (${u.score} pts)`).join(', ') || 'no data';
       const alertsStr = recentAlerts?.map(a => a.message).join('; ') || 'no recent events';
-      const recap = await askGroq(
+      const recap = await askAI(
         `You are blazeguy, an energetic Blaze.stream chat bot. Write a fun 2-sentence stream recap for chat. Mention top viewers and recent events. Hype and positive. No markdown.`,
         `Top viewers: ${topStr}. Recent events: ${alertsStr}`,
         120
@@ -1097,7 +1091,7 @@ async function handleCommand(channelId, token, message, sender) {
     case '!predict': {
       if (!arg) { await say(`Usage: !predict will we hit 100 followers today?`); return; }
       const { data: stats } = await supabase.from('loyalty').select('score.sum()', { count: 'exact' }).eq('channel_id', channelId);
-      const prediction = await askGroq(
+      const prediction = await askAI(
         `You are blazeguy, a fun Blaze.stream chat bot. Give a short, fun, dramatic prediction (1-2 sentences, max 25 words). Be playful and entertaining. No markdown.`,
         `Prediction question: "${arg}"`,
         80
@@ -1110,7 +1104,7 @@ async function handleCommand(channelId, token, message, sender) {
       // Generate a short story featuring chat members
       const { data: top } = await supabase.from('loyalty').select('username').eq('channel_id', channelId).order('score', { ascending: false }).limit(3);
       const names = top?.map(u => u.username).join(', ') || sender.username;
-      const story = await askGroq(
+      const story = await askAI(
         `You are blazeguy, a creative Blaze.stream chat bot. Write a VERY short funny story (2-3 sentences max) featuring the given viewers as characters. Fun and stream-themed. No markdown.`,
         `Write a story featuring these viewers: ${names}`,
         130
@@ -1127,7 +1121,7 @@ async function handleCommand(channelId, token, message, sender) {
       const context = u
         ? `They have ${u.score} loyalty points, sent ${u.msgs} messages, ${u.subs} subs, ${u.gifts} gifts. They are a "${ms.name}" tier member.`
         : `They are a new member of the community.`;
-      const shoutout = await askGroq(
+      const shoutout = await askAI(
         `You are blazeguy, an energetic Blaze.stream chat bot. Write a personalised hype shoutout for a viewer (2 sentences max, 30 words max). Use their stats to make it feel genuine. Mention their Blaze channel. No markdown.`,
         `Shoutout for @${target}. ${context}`,
         100
@@ -1342,6 +1336,65 @@ async function bootChannels() {
   } catch {}
 }
 
+// ── OAUTH PROXY — keeps client secret off the frontend ──
+app.post('/oauth/auth-url', async (req, res) => {
+  const { redirectUri } = req.body;
+  if (!redirectUri) return res.status(400).json({ error: 'redirectUri required' });
+  try {
+    const r = await fetch('https://blaze.stream/bapi/oauth2/generate-auth-url', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        clientId:     CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        redirectUri,
+        scopes: ['users.read', 'offline.access', 'channel.moderate']
+      })
+    });
+    const data = await r.json();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/oauth/token', async (req, res) => {
+  const { code, codeVerifier, redirectUri } = req.body;
+  if (!code) return res.status(400).json({ error: 'code required' });
+  try {
+    const r = await fetch('https://blaze.stream/bapi/oauth2/token', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        clientId:     CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        code, codeVerifier, redirectUri,
+        grantType: 'authorization_code'
+      })
+    });
+    const data = await r.json();
+    // Never send full token to frontend — store it and return a session reference
+    if (data.accessToken) {
+      // Save token server-side if channelId available, return sanitised data
+      res.json({ ok: true, scopes: data.scopes, username: data.username, userId: data.userId, avatarUrl: data.avatarUrl, displayName: data.displayName, accessToken: data.accessToken, refreshToken: data.refreshToken });
+    } else {
+      res.json(data);
+    }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/oauth/refresh', async (req, res) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) return res.status(400).json({ error: 'refreshToken required' });
+  try {
+    const r = await fetch('https://blaze.stream/bapi/oauth2/refresh', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ clientId: CLIENT_ID, clientSecret: CLIENT_SECRET, refreshToken })
+    });
+    const data = await r.json();
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── REST API ──
 app.get('/', (req, res) => {
   const connected = Object.values(sockets).filter(s => s.connected).length;
@@ -1442,7 +1495,7 @@ app.get('/api/debug', (req, res) => {
     bot_refresh_token_set:    !!BOT_REFRESH_TOKEN,
     bot_session_token_set:    !!BOT_SESSION_TOKEN,
     bot_session_token_length: BOT_SESSION_TOKEN?.length || 0,
-    groq_set:                 !!process.env.GROQ_API_KEY,
+    groq_set:                 !!process.env.GEMINI_API_KEY,
     bot_channel_id:           BOT_CHANNEL_ID,
     bot_username:             BOT_USERNAME,
     sockets: Object.entries(sockets).map(([id, s]) => ({
@@ -1461,10 +1514,10 @@ app.listen(PORT, async () => {
   console.log(`[BOT] API token length: ${BOT_API_TOKEN?.length || 0}`);
   console.log(`[BOT] Session token set: ${!!BOT_SESSION_TOKEN}`);
   console.log(`[BOT] Refresh token set: ${!!BOT_REFRESH_TOKEN}`);
-  console.log(`[BOT] Groq set: ${!!process.env.GROQ_API_KEY}`);
+  console.log(`[BOT] Groq set: ${!!process.env.GEMINI_API_KEY}`);
   if (!BOT_API_TOKEN)        console.error('[BOT] ⚠ BLAZE_BOT_TOKEN missing — chat will fail!');
   if (!BOT_SESSION_TOKEN)    console.warn('[BOT]  ⚠ BLAZE_SESSION_TOKEN missing — follow on !join will fail!');
   if (!BOT_REFRESH_TOKEN)    console.warn('[BOT]  ⚠ BLAZE_BOT_REFRESH_TOKEN missing — auto-refresh disabled!');
-  if (!process.env.GROQ_API_KEY) console.warn('[BOT] ⚠ GROQ_API_KEY missing — AI commands disabled!');
+  if (!process.env.GEMINI_API_KEY) console.warn('[BOT] ⚠ GEMINI_API_KEY missing — AI commands disabled!');
   await bootChannels();
 });
