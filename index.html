@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blaze Companion — Streamer Dashboard</title>
+<title>BlazGuy — Streamer Dashboard</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -16,7 +16,13 @@
   --blue:#4C8EF5;--purple:#9B6CF5;--purpledim:rgba(155,108,245,0.1);
   --gold:#F0B90B;--silver:#9BACC8;--bronze:#C87941;
 }
-html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);font-size:14px;overflow:hidden;}
+#hero-view{height:calc(100vh - 56px);overflow-y:auto;}
+#dash-view{height:calc(100vh - 56px);overflow:hidden;display:flex;flex-direction:column;}
+.dash{display:grid;grid-template-columns:260px 1fr 300px;height:100%;overflow:hidden;}
+.dash-sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;height:100%;}
+.dash-main{display:flex;flex-direction:column;overflow:hidden;min-height:0;height:100%;}
+.dash-right{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;height:100%;}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 
@@ -33,7 +39,7 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 .conn-pill.on{background:var(--greendim);color:var(--green);border:1px solid rgba(34,212,122,.2);}
 .conn-pill.off{background:var(--reddim);color:var(--red);border:1px solid rgba(240,80,80,.2);}
 
-/* ── HERO (non-joined state) ── */
+/* ── HERO ── */
 .hero{max-width:720px;margin:80px auto;padding:0 24px;text-align:center;}
 .hero h1{font-size:42px;font-weight:700;line-height:1.15;margin-bottom:16px;}
 .hero h1 span{color:var(--blaze);}
@@ -45,16 +51,6 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 .step p{font-size:12px;color:var(--muted2);line-height:1.5;}
 .hero-cta{background:var(--blaze);color:#000;border:none;padding:16px 32px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px;}
 .hero-cta:hover{background:var(--blaze2);}
-.hero-or{color:var(--muted);font-size:13px;margin:16px 0;}
-.hero-token{display:flex;gap:8px;max-width:480px;margin:0 auto;}
-.hero-token input{flex:1;background:var(--card);border:1px solid var(--border2);color:var(--text);padding:10px 14px;border-radius:10px;font-size:13px;font-family:'JetBrains Mono',monospace;}
-.hero-token input:focus{outline:1px solid var(--blaze);}
-
-/* ── DASHBOARD GRID ── */
-.dash{display:grid;grid-template-columns:260px 1fr 300px;grid-template-rows:auto 1fr;gap:0;height:calc(100vh - 56px);}
-.dash-sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
-.dash-main{display:flex;flex-direction:column;overflow:hidden;}
-.dash-right{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
 
 /* SIDEBAR */
 .sb-section{padding:16px;border-bottom:1px solid var(--border);}
@@ -184,8 +180,6 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
   .hero p{font-size:14px;}
   .hero-steps{grid-template-columns:1fr;gap:10px;}
   .hero-cta{width:100%;justify-content:center;padding:14px 20px;font-size:15px;}
-  .hero-token{flex-direction:column;}
-  .hero-token input,.hero-token .btn{width:100%;}
 
   /* Topbar */
   .topbar{padding:0 14px;height:52px;}
@@ -391,7 +385,7 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 <body>
 
 <div class="topbar">
-  <div class="logo"><div class="logo-dot"></div> Blaze Companion</div>
+  <div class="logo"><div class="logo-dot"></div> BlazGuy</div>
   <div class="topbar-right">
     <div id="conn-pill" class="conn-pill off">Not Connected</div>
     <div id="user-area"></div>
@@ -422,12 +416,6 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
       </div>
     </div>
     <button class="hero-cta" onclick="startOAuth()">⚡ Login with Blaze to manage your dashboard</button>
-    <div class="hero-or">or paste token manually</div>
-    <div class="hero-token">
-      <input id="manual-token" placeholder="Paste access token">
-      <input id="manual-channel" placeholder="Channel UUID">
-      <button class="btn" onclick="manualConnect()">Connect</button>
-    </div>
   </div>
 </div>
 
@@ -792,16 +780,6 @@ async function checkBotStatus() {
     }
     // else show hero — bot not in their channel yet
   } catch { /* show hero */ }
-}
-
-function manualConnect() {
-  const t  = document.getElementById('manual-token').value.trim();
-  const ch = document.getElementById('manual-channel').value.trim();
-  if (!t || !ch) { toast('Paste both token and channel ID'); return; }
-  accessToken = t; channelId = ch;
-  sessionStorage.setItem('bc_token', t);
-  sessionStorage.setItem('bc_channel', ch);
-  connectToBot();
 }
 
 async function connectToBot() {
