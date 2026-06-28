@@ -3,33 +3,34 @@ const cors       = require('cors');
 const { io }     = require('socket.io-client');
 const fetch      = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ── GEMINI AI ──
-let gemini = null;
-function getGemini() {
-  if (!gemini && process.env.GEMINI_API_KEY) {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    gemini = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+// ── GEMINI AI (new @google/genai SDK) ──
+let ai = null;
+function getAI() {
+  if (!ai && process.env.GEMINI_API_KEY) {
+    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   }
-  return gemini;
+  return ai;
 }
 
 async function askAI(systemPrompt, userPrompt) {
-  const model = getGemini();
-  if (!model) { console.log('[AI] GEMINI_API_KEY not set'); return null; }
+  const client = getAI();
+  if (!client) { console.log('[AI] GEMINI_API_KEY not set'); return null; }
   try {
-    const prompt = `${systemPrompt}\n\nUser: ${userPrompt}\nReply:`;
-    const result = await model.generateContent(prompt);
-    const text   = result.response.text()?.trim();
+    const response = await client.models.generateContent({
+      model:    'gemini-2.0-flash',
+      contents: `${systemPrompt}\n\nUser: ${userPrompt}\nReply (plain text only, no markdown, max 2 sentences):`,
+    });
+    const text = response.text?.trim();
     console.log(`[AI] Response: ${text?.slice(0,80)}`);
     return text || null;
   } catch (e) {
-    console.error('[AI] Gemini error:', e.message);
+    console.error('[AI] Gemini error:', e.message, e.status || '');
     return null;
   }
 }
@@ -1495,7 +1496,7 @@ app.get('/api/debug', (req, res) => {
     bot_refresh_token_set:    !!BOT_REFRESH_TOKEN,
     bot_session_token_set:    !!BOT_SESSION_TOKEN,
     bot_session_token_length: BOT_SESSION_TOKEN?.length || 0,
-    groq_set:                 !!process.env.GEMINI_API_KEY,
+    groq_set:                 !!(process.env.GEMINI_API_KEY),
     bot_channel_id:           BOT_CHANNEL_ID,
     bot_username:             BOT_USERNAME,
     sockets: Object.entries(sockets).map(([id, s]) => ({
@@ -1514,7 +1515,7 @@ app.listen(PORT, async () => {
   console.log(`[BOT] API token length: ${BOT_API_TOKEN?.length || 0}`);
   console.log(`[BOT] Session token set: ${!!BOT_SESSION_TOKEN}`);
   console.log(`[BOT] Refresh token set: ${!!BOT_REFRESH_TOKEN}`);
-  console.log(`[BOT] Groq set: ${!!process.env.GEMINI_API_KEY}`);
+  console.log(`[BOT] Groq set: ${!!(process.env.GEMINI_API_KEY)}`);
   if (!BOT_API_TOKEN)        console.error('[BOT] ⚠ BLAZE_BOT_TOKEN missing — chat will fail!');
   if (!BOT_SESSION_TOKEN)    console.warn('[BOT]  ⚠ BLAZE_SESSION_TOKEN missing — follow on !join will fail!');
   if (!BOT_REFRESH_TOKEN)    console.warn('[BOT]  ⚠ BLAZE_BOT_REFRESH_TOKEN missing — auto-refresh disabled!');
