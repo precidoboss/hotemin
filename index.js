@@ -14,7 +14,7 @@ let gemini = null;
 function getGemini() {
   if (!gemini && process.env.GEMINI_API_KEY) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    gemini = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    gemini = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
   }
   return gemini;
 }
