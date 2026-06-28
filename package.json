@@ -1,7 +1,7 @@
 {
   "name": "blaze-companion-bot",
   "version": "2.0.0",
-  "description": "Blaze Companion loyalty bot — Supabase persistent backend",
+  "description": "blazeguy bot — Supabase persistent backend",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -12,6 +12,6 @@
     "node-fetch": "^2.7.0",
     "cors": "^2.8.5",
     "@supabase/supabase-js": "^2.39.0",
-    "groq-sdk": "^0.3.3"
+    "@google/generative-ai": "^0.2.1"
   }
 }
