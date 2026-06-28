@@ -52,7 +52,7 @@ let   BOT_API_TOKEN      = process.env.BLAZE_BOT_TOKEN         || '';
 let   BOT_REFRESH_TOKEN  = process.env.BLAZE_BOT_REFRESH_TOKEN || '';
 let   BOT_TOKEN          = BOT_API_TOKEN;
 const BOT_CHANNEL_ID     = process.env.BLAZE_BOT_CHANNEL_ID    || '6b0971e0-548c-447a-bb71-e2fa62369d18';
-let   BOT_USERNAME       = process.env.BLAZE_BOT_USERNAME       || 'BlazGuy';
+let   BOT_USERNAME       = process.env.BLAZE_BOT_USERNAME       || 'blazeguy';
 let   tokenRefreshing    = false;
 
 // ── AUTO REFRESH TOKEN ──
@@ -285,8 +285,12 @@ async function sendChat(channelId, token, message) {
 
 // ── BOT FOLLOW USER ──
 // ── BOT FOLLOW USER ──
+// Uses BLAZE_SESSION_TOKEN (browser cookie token) — this is separate from OAuth.
+// Session tokens DO rotate when the bot account logs out or sessions expire.
+// If follow stops working, get a fresh token from browser cookies while logged in as blazeguy.
 async function botFollowChannel(targetChannelId) {
-  const sessionToken = BOT_SESSION_TOKEN || BOT_API_TOKEN;
+  // Session token rotates — always use latest from env, fallback to OAuth token
+  const sessionToken = process.env.BLAZE_SESSION_TOKEN || BOT_API_TOKEN;
   try {
     const res = await fetch(`https://blaze.stream/bapi/channels/${targetChannelId}/follow`, {
       method: 'POST',
@@ -301,6 +305,9 @@ async function botFollowChannel(targetChannelId) {
     });
     const text = await res.text();
     console.log(`[BOT] Follow ${targetChannelId.slice(0,8)} → ${res.status}: ${text.slice(0,120)}`);
+    if (res.status === 401) {
+      console.warn('[BOT] ⚠ Session token expired — update BLAZE_SESSION_TOKEN in Render env vars');
+    }
     return res.ok;
   } catch (e) {
     console.error(`[BOT] Follow error:`, e.message);
@@ -308,7 +315,7 @@ async function botFollowChannel(targetChannelId) {
   }
 }
 
-// ── JOIN: streamer types !join in BlazGuy's channel ──
+// ── JOIN: streamer types !join in blazeguy's channel ──
 async function handleJoin(sender) {
   const { id: streamerId, username, displayName, avatarUrl } = sender;
   console.log(`[BOT] !join from @${username} (${streamerId})`);
@@ -351,7 +358,7 @@ async function handleJoin(sender) {
   // Connect socket to their channel
   connectChannel(streamerId, BOT_TOKEN);
 
-  // Confirm in BlazGuy's channel
+  // Confirm in blazeguy's channel
   await sendChat(BOT_CHANNEL_ID, BOT_TOKEN,
     `✅ @${username} ⚡ @${BOT_USERNAME} has joined your channel and followed you! Now type /mod ${BOT_USERNAME} in your chat to unlock full features!`);
 
@@ -374,12 +381,12 @@ async function handleJoin(sender) {
   console.log(`[BOT] ✅ Joined @${username} (${streamerId})`);
 }
 
-// ── LEAVE: works from streamer's OWN chat OR from BlazGuy's chat ──
+// ── LEAVE: works from streamer's OWN chat OR from blazeguy's chat ──
 async function handleLeave(channelId, sender) {
   const username = sender.username || sender;
 
   // Figure out the actual streamer channel to leave
-  // If typed in BlazGuy's channel → leave the sender's channel
+  // If typed in blazeguy's channel → leave the sender's channel
   // If typed in their own channel → leave that channel
   const targetChannelId = (channelId === BOT_CHANNEL_ID) ? sender.id : channelId;
   const targetUsername  = username;
@@ -411,10 +418,10 @@ async function handleLeave(channelId, sender) {
   }
 
   // Remove from Supabase (bot stops rejoining on restart)
-  // NOTE: we do NOT unfollow — BlazGuy stays following the streamer
+  // NOTE: we do NOT unfollow — blazeguy stays following the streamer
   await supabase.from('channels').delete().eq('id', targetChannelId);
 
-  // Confirm in BlazGuy's channel
+  // Confirm in blazeguy's channel
   await sendChat(BOT_CHANNEL_ID, BOT_TOKEN,
     `👋 @${BOT_USERNAME} has left @${targetUsername}'s channel. Data saved. Type !join here to re-add anytime!`);
 
@@ -555,7 +562,7 @@ async function handleCommand(channelId, token, message, sender) {
         .order('score', { ascending: false }).limit(3);
       if (!top?.length) { await say(`💬 No data yet — start chatting to earn points!`); return; }
       const lines = top.map((u, i) => `${['🥇','🥈','🥉'][i]} @${u.username} · ${u.score}pts (${getMilestone(u.score).name})`);
-      await say(`⚡ BlazGuy Loyalty Board ─ ${lines.join(' ┃ ')} ─ Type !loyalty to check your rank!`);
+      await say(`⚡ blazeguy Loyalty Board ─ ${lines.join(' ┃ ')} ─ Type !loyalty to check your rank!`);
       break;
     }
     case '!hug': {
@@ -574,7 +581,7 @@ async function handleCommand(channelId, token, message, sender) {
       const { count } = await supabase
         .from('loyalty').select('*', { count: 'exact', head: true })
         .eq('channel_id', channelId);
-      await say(`⚡ BlazGuy ─ Online for ${timeStr} ┃ Tracking ${count || 0} viewers ┃ Type !commands to see all features!`);
+      await say(`⚡ blazeguy ─ Online for ${timeStr} ┃ Tracking ${count || 0} viewers ┃ Type !commands to see all features!`);
       break;
     }
 
@@ -734,11 +741,71 @@ async function handleCommand(channelId, token, message, sender) {
     }
 
     case '!games': {
-      await say(`🎮 GAMES: !coinflip heads/tails [bet] | !roll [sides] [bet] | !rps rock/paper/scissors [bet] | !trivia (25pts first correct wins) | !heist [bet] (crew game) — 30s cooldown, max 50pt bet`);
+      await say(`🎮 Games: !coinflip heads/tails [bet] ┃ !roll [sides] [bet] ┃ !rps rock/paper/scissors [bet] ┃ !trivia (25pts) ┃ !heist [bet] ┃ !dice [sides] ┃ !8ball question — max 50pt bet, 30s cooldown`);
       break;
     }
 
-    // ── CUSTOM COMMANDS ──
+    case '!rank': {
+      const target = arg || sender.username;
+      const { data: u } = await supabase.from('loyalty').select('*').eq('channel_id', channelId).eq('username', target).single();
+      if (!u) { await say(`❓ @${target} hasn't earned any points yet!`); return; }
+      const ms   = getMilestone(u.score);
+      const next = getNextMilestone(u.score);
+      const { count } = await supabase.from('loyalty').select('*', { count:'exact', head:true }).eq('channel_id', channelId).gt('score', u.score);
+      const rank = (count || 0) + 1;
+      await say(`${ms.icon} @${u.username} ─ Rank #${rank} ┃ ${u.score} pts ┃ ${ms.name}${next ? ` ┃ ${next.pts - u.score} pts to ${next.icon} ${next.name}` : ' ┃ 👑 MAX'}`);
+      break;
+    }
+    case '!top': {
+      const { data: top } = await supabase.from('loyalty').select('username,score').eq('channel_id', channelId).order('score', { ascending: false }).limit(3);
+      if (!top?.length) { await say(`💬 No data yet — chat to earn points!`); return; }
+      await say(`⚡ Top viewers ─ ${top.map((u,i)=>`${['🥇','🥈','🥉'][i]} @${u.username} (${u.score}pts)`).join(' ┃ ')}`);
+      break;
+    }
+    case '!give': {
+      const targetUser = parts[1]?.replace('@','');
+      const amount     = parseInt(parts[2]);
+      if (!targetUser || !amount || amount < 1) { await say(`💸 Usage: !give @username amount`); return; }
+      if (targetUser.toLowerCase() === sender.username.toLowerCase()) { await say(`😅 @${sender.username} you can't give points to yourself!`); return; }
+      const { data: from } = await supabase.from('loyalty').select('score').eq('channel_id', channelId).eq('user_id', sender.id).single();
+      if (!from || from.score < amount) { await say(`@${sender.username} not enough points! You have ${from?.score || 0} pts.`); return; }
+      const { data: to } = await supabase.from('loyalty').select('user_id,score').eq('channel_id', channelId).eq('username', targetUser).single();
+      if (!to) { await say(`❓ @${targetUser} not found — they need to chat first!`); return; }
+      await supabase.from('loyalty').update({ score: from.score - amount }).eq('channel_id', channelId).eq('user_id', sender.id);
+      await supabase.from('loyalty').update({ score: to.score + amount }).eq('channel_id', channelId).eq('user_id', to.user_id);
+      await say(`💸 @${sender.username} gave ${amount} pts to @${targetUser}! ┃ @${sender.username}: ${from.score - amount}pts ┃ @${targetUser}: ${to.score + amount}pts`);
+      break;
+    }
+    case '!8ball': {
+      if (!arg) { await say(`🎱 Usage: !8ball will I win today?`); return; }
+      const answers = ['✅ Yes, definitely!','✅ Without a doubt!','✅ Signs point to yes!','✅ Most likely!','🤔 Ask again later...','🤔 Cannot predict now...','❌ Don\'t count on it.','❌ My sources say no.','❌ Very doubtful.'];
+      await say(`🎱 @${sender.username} asks: "${arg}" ─ ${answers[Math.floor(Math.random() * answers.length)]}`);
+      break;
+    }
+    case '!dice': {
+      const sides = Math.min(100, Math.max(2, parseInt(parts[1]) || 6));
+      await say(`🎲 @${sender.username} rolled a d${sides} and got: ${Math.floor(Math.random() * sides) + 1}!`);
+      break;
+    }
+    case '!quote': {
+      if (arg) {
+        await supabase.from('alerts').insert({ channel_id: channelId, type: 'quote', message: `"${arg}" — @${sender.username}`, icon: '💬' });
+        await say(`💬 Quote saved: "${arg}"`);
+      } else {
+        const { data: quotes } = await supabase.from('alerts').select('message').eq('channel_id', channelId).eq('type', 'quote').limit(50);
+        if (!quotes?.length) { await say(`💬 No quotes saved yet! Use: !quote your text here`); return; }
+        const pick = quotes[Math.floor(Math.random() * quotes.length)];
+        await say(`💬 ${pick.message}`);
+      }
+      break;
+    }
+    case '!stats': {
+      const target = arg || sender.username;
+      const { data: u } = await supabase.from('loyalty').select('*').eq('channel_id', channelId).eq('username', target).single();
+      if (!u) { await say(`❓ @${target} has no stats yet!`); return; }
+      await say(`📊 @${u.username} ─ ${u.score}pts ┃ ${u.msgs||0} msgs ┃ ${u.follows||0} follows ┃ ${u.subs||0} subs ┃ ${u.gifts||0} gifts ┃ ${u.votes||0} votes ┃ ${getMilestone(u.score).icon} ${getMilestone(u.score).name}`);
+      break;
+    }
     case '!addcmd': {
       const trigger  = parts[1]?.toLowerCase().startsWith('!') ? parts[1].toLowerCase() : '!' + (parts[1]||'').toLowerCase();
       const response = parts.slice(2).join(' ');
@@ -756,7 +823,7 @@ async function handleCommand(channelId, token, message, sender) {
     case '!commands': {
       const { data: cmds } = await supabase.from('custom_commands').select('trigger').eq('channel_id', channelId).limit(10);
       const custom = cmds?.map(c => c.trigger).join(' ') || 'none yet';
-      await say(`⚡ BlazGuy Commands ─ 🏆 Loyalty: !devoted !loyalty !leaderboard !milestone !balance !shoutout ─ 🎮 Games: !coinflip !roll !rps !trivia !heist ─ 🛒 Shop: !shop !buy ─ 🤖 AI: !ask !roast !compliment !predict !story ─ 📋 Custom: ${custom} ─ Type !help [command] for details`);
+      await say(`⚡ blazeguy Commands ─ 🏆 Loyalty: !devoted !loyalty !rank !top !leaderboard !milestone !balance !stats !shoutout !give ─ 🎮 Games: !coinflip !roll !rps !8ball !dice !trivia !heist ─ 🛒 Shop: !shop !buy ─ 🤖 AI: !ask !roast !compliment !predict !story !recap ─ 🔧 Tools: !brb !poll !so !hug !quote !uptime ─ 📋 Custom: ${custom}`);
       break;
     }
 
@@ -957,18 +1024,18 @@ async function handleCommand(channelId, token, message, sender) {
     // ── AI COMMANDS (powered by Groq / Llama 3) ──
 
     case '!ask': {
-      if (!arg) { await say(`Usage: !ask your question here`); return; }
-      if (!process.env.GROQ_API_KEY) { await say(`AI not configured yet!`); return; }
+      if (!arg) { await say(`🤖 Usage: !ask your question — e.g. !ask what is a good stream schedule?`); return; }
+      if (!process.env.GROQ_API_KEY) { await say(`🤖 AI is not configured yet — GROQ_API_KEY not set`); return; }
       const settings = await getSettings(channelId);
+      await say(`🤖 Thinking…`);
       const answer = await askGroq(
-        `You are BlazGuy, a fun and helpful Blaze.stream chat bot. Keep answers SHORT (max 2 sentences), casual, and chat-friendly. Never use markdown. Channel currency is called "${settings.currency_name}".`,
-        arg,
-        100
+        `You are blazeguy, a fun helpful Blaze.stream chat bot. Keep answers SHORT (1-2 sentences max), casual, friendly. No markdown, no asterisks, plain text only. Channel loyalty currency: "${settings.currency_name}".`,
+        arg, 100
       );
       if (answer) {
-        await say(`🤖 ${answer}`);
+        await say(`🤖 @${sender.username} — ${answer}`);
       } else {
-        await say(`🤖 @${sender.username} I couldn't think of an answer right now, try again!`);
+        await say(`🤖 @${sender.username} Groq AI timed out — check GROQ_API_KEY in Render env vars and try again!`);
       }
       break;
     }
@@ -979,7 +1046,7 @@ async function handleCommand(channelId, token, message, sender) {
       const { data: u } = await supabase.from('loyalty').select('score,msgs,username').eq('channel_id', channelId).eq('username', target).single();
       const context = u ? `They have ${u.score} loyalty points and sent ${u.msgs} messages.` : `They haven't chatted much.`;
       const roast = await askGroq(
-        `You are a funny, savage but friendly Blaze.stream chat bot called BlazGuy. Write a single short roast (1 sentence, max 20 words) about a viewer. Keep it fun, not mean. No markdown.`,
+        `You are a funny, savage but friendly Blaze.stream chat bot called blazeguy. Write a single short roast (1 sentence, max 20 words) about a viewer. Keep it fun, not mean. No markdown.`,
         `Roast the viewer named "${target}". ${context}`,
         60
       );
@@ -992,7 +1059,7 @@ async function handleCommand(channelId, token, message, sender) {
       const { data: u } = await supabase.from('loyalty').select('score,milestone').eq('channel_id', channelId).eq('username', target).single();
       const context = u ? `They have ${u.score} loyalty points and are a "${u.milestone}" member.` : '';
       const comp = await askGroq(
-        `You are BlazGuy, a warm and hype Blaze.stream chat bot. Write a single genuine compliment (1 sentence, max 20 words) for a viewer. Energetic and fun. No markdown.`,
+        `You are blazeguy, a warm and hype Blaze.stream chat bot. Write a single genuine compliment (1 sentence, max 20 words) for a viewer. Energetic and fun. No markdown.`,
         `Compliment the viewer named "${target}". ${context}`,
         60
       );
@@ -1019,7 +1086,7 @@ async function handleCommand(channelId, token, message, sender) {
       const topStr    = topUsers?.map((u,i) => `${i+1}. @${u.username} (${u.score} pts)`).join(', ') || 'no data';
       const alertsStr = recentAlerts?.map(a => a.message).join('; ') || 'no recent events';
       const recap = await askGroq(
-        `You are BlazGuy, an energetic Blaze.stream chat bot. Write a fun 2-sentence stream recap for chat. Mention top viewers and recent events. Hype and positive. No markdown.`,
+        `You are blazeguy, an energetic Blaze.stream chat bot. Write a fun 2-sentence stream recap for chat. Mention top viewers and recent events. Hype and positive. No markdown.`,
         `Top viewers: ${topStr}. Recent events: ${alertsStr}`,
         120
       );
@@ -1031,7 +1098,7 @@ async function handleCommand(channelId, token, message, sender) {
       if (!arg) { await say(`Usage: !predict will we hit 100 followers today?`); return; }
       const { data: stats } = await supabase.from('loyalty').select('score.sum()', { count: 'exact' }).eq('channel_id', channelId);
       const prediction = await askGroq(
-        `You are BlazGuy, a fun Blaze.stream chat bot. Give a short, fun, dramatic prediction (1-2 sentences, max 25 words). Be playful and entertaining. No markdown.`,
+        `You are blazeguy, a fun Blaze.stream chat bot. Give a short, fun, dramatic prediction (1-2 sentences, max 25 words). Be playful and entertaining. No markdown.`,
         `Prediction question: "${arg}"`,
         80
       );
@@ -1044,7 +1111,7 @@ async function handleCommand(channelId, token, message, sender) {
       const { data: top } = await supabase.from('loyalty').select('username').eq('channel_id', channelId).order('score', { ascending: false }).limit(3);
       const names = top?.map(u => u.username).join(', ') || sender.username;
       const story = await askGroq(
-        `You are BlazGuy, a creative Blaze.stream chat bot. Write a VERY short funny story (2-3 sentences max) featuring the given viewers as characters. Fun and stream-themed. No markdown.`,
+        `You are blazeguy, a creative Blaze.stream chat bot. Write a VERY short funny story (2-3 sentences max) featuring the given viewers as characters. Fun and stream-themed. No markdown.`,
         `Write a story featuring these viewers: ${names}`,
         130
       );
@@ -1061,7 +1128,7 @@ async function handleCommand(channelId, token, message, sender) {
         ? `They have ${u.score} loyalty points, sent ${u.msgs} messages, ${u.subs} subs, ${u.gifts} gifts. They are a "${ms.name}" tier member.`
         : `They are a new member of the community.`;
       const shoutout = await askGroq(
-        `You are BlazGuy, an energetic Blaze.stream chat bot. Write a personalised hype shoutout for a viewer (2 sentences max, 30 words max). Use their stats to make it feel genuine. Mention their Blaze channel. No markdown.`,
+        `You are blazeguy, an energetic Blaze.stream chat bot. Write a personalised hype shoutout for a viewer (2 sentences max, 30 words max). Use their stats to make it feel genuine. Mention their Blaze channel. No markdown.`,
         `Shoutout for @${target}. ${context}`,
         100
       );
@@ -1187,7 +1254,7 @@ async function handleEvent(channelId, token, type, payload) {
       const { raider } = payload;
       await pushAlert(channelId, 'raid', `RAID from ${raider.displayName || raider.username}!`, '🚨');
       await sendChat(channelId, BOT_API_TOKEN,
-        `🚨 RAID INCOMING! @${raider.displayName || raider.username} is raiding with their crew! Welcome everyone — type !commands to see what BlazGuy can do! ⚡🔥`);
+        `🚨 RAID INCOMING! @${raider.displayName || raider.username} is raiding with their crew! Welcome everyone — type !commands to see what blazeguy can do! ⚡🔥`);
       break;
     }
     case 'channel.ban':      await pushAlert(channelId, 'mod', `${payload.bannedUser?.username} was banned.`, '🔨'); break;
@@ -1278,7 +1345,7 @@ async function bootChannels() {
 // ── REST API ──
 app.get('/', (req, res) => {
   const connected = Object.values(sockets).filter(s => s.connected).length;
-  res.json({ name: 'BlazGuy Bot', status: 'ok', channels: Object.keys(sockets).length, connected, uptime: Math.round((Date.now() - startedAt) / 1000) });
+  res.json({ name: 'blazeguy Bot', status: 'ok', channels: Object.keys(sockets).length, connected, uptime: Math.round((Date.now() - startedAt) / 1000) });
 });
 
 app.get('/health', (req, res) => {
@@ -1390,7 +1457,7 @@ app.get('/api/debug', (req, res) => {
 // ── START ──
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
-  console.log(`[BOT] BlazGuy running on port ${PORT}`);
+  console.log(`[BOT] blazeguy running on port ${PORT}`);
   console.log(`[BOT] API token length: ${BOT_API_TOKEN?.length || 0}`);
   console.log(`[BOT] Session token set: ${!!BOT_SESSION_TOKEN}`);
   console.log(`[BOT] Refresh token set: ${!!BOT_REFRESH_TOKEN}`);
