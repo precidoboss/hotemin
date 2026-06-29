@@ -3,34 +3,38 @@ const cors       = require('cors');
 const { io }     = require('socket.io-client');
 const fetch      = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
-const { GoogleGenAI } = require('@google/genai');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ── GEMINI AI (new @google/genai SDK) ──
-let ai = null;
-function getAI() {
-  if (!ai && process.env.GEMINI_API_KEY) {
-    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  }
-  return ai;
-}
-
+// ── GEMINI AI via REST — no SDK, no dependency issues ──
 async function askAI(systemPrompt, userPrompt) {
-  const client = getAI();
-  if (!client) { console.log('[AI] GEMINI_API_KEY not set'); return null; }
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) { console.log('[AI] GEMINI_API_KEY not set'); return null; }
   try {
-    const response = await client.models.generateContent({
-      model:    'gemini-2.0-flash',
-      contents: `${systemPrompt}\n\nUser: ${userPrompt}\nReply (plain text only, no markdown, max 2 sentences):`,
-    });
-    const text = response.text?.trim();
-    console.log(`[AI] Response: ${text?.slice(0,80)}`);
+    const prompt = `${systemPrompt}\n\nUser message: ${userPrompt}\n\nYour reply (plain text only, no markdown, max 2 sentences):`;
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method:  'POST',
+        headers: { 'content-type': 'application/json' },
+        body:    JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 150, temperature: 0.8 }
+        })
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('[AI] Gemini API error:', res.status, JSON.stringify(data).slice(0, 200));
+      return null;
+    }
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    console.log(`[AI] OK: ${text?.slice(0, 80)}`);
     return text || null;
   } catch (e) {
-    console.error('[AI] Gemini error:', e.message, e.status || '');
+    console.error('[AI] Fetch error:', e.message);
     return null;
   }
 }
@@ -485,13 +489,28 @@ const TRIVIA_QUESTIONS = [
   { q: 'What color is the sky on a clear day?',       a: 'blue',       hint: 'cool color' },
 ];
 
+// ── OWNER-ONLY COMMANDS ──
+const OWNER_ONLY_CMDS = new Set([
+  '!addcmd','!delcmd','!additem','!setcurrency','!setphrase',
+  '!addtimer','!stoptimer','!starttimer','!deltimer',
+  '!spam','!events','!endpoll','!back','!aimod'
+]);
+
 // ── BOT COMMANDS ──
 async function handleCommand(channelId, token, message, sender) {
   const parts = message.trim().split(/\s+/);
   const cmd   = parts[0].toLowerCase();
   const arg   = parts.slice(1).join(' ').replace('@', '').trim();
 
-  const say = (msg) => sendChat(channelId, token, msg);
+  const say = (msg) => sendChat(channelId, BOT_API_TOKEN || token, msg);
+
+  // Owner check — sender.id matches channelId, or sender is the dashboard
+  const isOwner = sender.id === channelId || sender.isOwner === true || sender.username === 'dashboard';
+
+  if (OWNER_ONLY_CMDS.has(cmd) && !isOwner) {
+    await say(`🔒 @${sender.username} — only the streamer can use ${cmd}`);
+    return;
+  }
 
   switch (cmd) {
     case '!devoted': {
