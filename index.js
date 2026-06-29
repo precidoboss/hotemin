@@ -21,7 +21,7 @@ async function askAI(systemPrompt, userPrompt) {
         headers: { 'content-type': 'application/json' },
         body:    JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 150, temperature: 0.8 }
+          generationConfig: { maxOutputTokens: 200, temperature: 0.8, thinkingConfig: { thinkingBudget: 0 } }
         })
       }
     );
@@ -30,7 +30,12 @@ async function askAI(systemPrompt, userPrompt) {
       console.error('[AI] Gemini API error:', res.status, JSON.stringify(data).slice(0, 200));
       return null;
     }
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const text = parts.filter(p => p.text && !p.thought).map(p => p.text).join(' ').trim();
+    const finishReason = data?.candidates?.[0]?.finishReason;
+    if (finishReason && finishReason !== 'STOP') {
+      console.log(`[AI] finishReason=${finishReason}, text so far: ${text?.slice(0, 80)}`);
+    }
     console.log(`[AI] OK: ${text?.slice(0, 80)}`);
     return text || null;
   } catch (e) {
