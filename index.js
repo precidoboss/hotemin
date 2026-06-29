@@ -1360,6 +1360,7 @@ async function bootChannels() {
 app.post('/oauth/auth-url', async (req, res) => {
   const { redirectUri } = req.body;
   if (!redirectUri) return res.status(400).json({ error: 'redirectUri required' });
+  if (!CLIENT_SECRET) return res.status(500).json({ error: 'BLAZE_CLIENT_SECRET not set in Render env vars' });
   try {
     const r = await fetch('https://blaze.stream/bapi/oauth2/generate-auth-url', {
       method: 'POST',
@@ -1372,13 +1373,18 @@ app.post('/oauth/auth-url', async (req, res) => {
       })
     });
     const data = await r.json();
+    console.log('[OAUTH] auth-url response:', r.status, JSON.stringify(data).slice(0,100));
     res.json(data);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error('[OAUTH] auth-url error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post('/oauth/token', async (req, res) => {
   const { code, codeVerifier, redirectUri } = req.body;
   if (!code) return res.status(400).json({ error: 'code required' });
+  if (!CLIENT_SECRET) return res.status(500).json({ error: 'BLAZE_CLIENT_SECRET not set in Render env vars' });
   try {
     const r = await fetch('https://blaze.stream/bapi/oauth2/token', {
       method: 'POST',
@@ -1391,19 +1397,22 @@ app.post('/oauth/token', async (req, res) => {
       })
     });
     const data = await r.json();
-    // Never send full token to frontend — store it and return a session reference
+    console.log('[OAUTH] token response:', r.status, JSON.stringify(data).slice(0,100));
     if (data.accessToken) {
-      // Save token server-side if channelId available, return sanitised data
-      res.json({ ok: true, scopes: data.scopes, username: data.username, userId: data.userId, avatarUrl: data.avatarUrl, displayName: data.displayName, accessToken: data.accessToken, refreshToken: data.refreshToken });
+      res.json({ ok: true, accessToken: data.accessToken, refreshToken: data.refreshToken, userId: data.userId, username: data.username, displayName: data.displayName, avatarUrl: data.avatarUrl, scopes: data.scopes });
     } else {
       res.json(data);
     }
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error('[OAUTH] token error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post('/oauth/refresh', async (req, res) => {
   const { refreshToken } = req.body;
   if (!refreshToken) return res.status(400).json({ error: 'refreshToken required' });
+  if (!CLIENT_SECRET) return res.status(500).json({ error: 'BLAZE_CLIENT_SECRET not set in Render env vars' });
   try {
     const r = await fetch('https://blaze.stream/bapi/oauth2/refresh', {
       method: 'POST',
@@ -1515,7 +1524,8 @@ app.get('/api/debug', (req, res) => {
     bot_refresh_token_set:    !!BOT_REFRESH_TOKEN,
     bot_session_token_set:    !!BOT_SESSION_TOKEN,
     bot_session_token_length: BOT_SESSION_TOKEN?.length || 0,
-    groq_set:                 !!(process.env.GEMINI_API_KEY),
+    client_secret_set:        !!CLIENT_SECRET,
+    gemini_set:               !!(process.env.GEMINI_API_KEY),
     bot_channel_id:           BOT_CHANNEL_ID,
     bot_username:             BOT_USERNAME,
     sockets: Object.entries(sockets).map(([id, s]) => ({
