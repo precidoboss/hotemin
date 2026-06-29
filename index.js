@@ -15,7 +15,7 @@ async function askAI(systemPrompt, userPrompt) {
   try {
     const prompt = `${systemPrompt}\n\nUser message: ${userPrompt}\n\nYour reply (plain text only, no markdown, max 2 sentences):`;
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method:  'POST',
         headers: { 'content-type': 'application/json' },
